@@ -78,7 +78,7 @@ const THEM = PEOPLE.find(p => p !== ME);
 // GitHub token: pasted once per phone, kept only on that phone (never in the repo).
 // A link with &t=<token> carries it, so the receiver doesn't need to paste anything.
 function token() {
-  let t = new URLSearchParams(location.search).get("t") || new URLSearchParams(location.hash.slice(1)).get("t") || "";
+  let t = (new URLSearchParams(location.search).get("t") || new URLSearchParams(location.hash.slice(1)).get("t") || "").trim();
   if (t) { try { localStorage.setItem("gh_token", t); } catch {} return t; }
   try { t = localStorage.getItem("gh_token") || ""; } catch {}
   if (!t) {
@@ -87,7 +87,12 @@ function token() {
   }
   return t;
 }
-function forgetToken() { try { localStorage.removeItem("gh_token"); } catch {} }
+// Drop a rejected token from storage and from the address, so the next try asks again.
+function forgetToken() {
+  try { localStorage.removeItem("gh_token"); } catch {}
+  const q = new URLSearchParams(location.search); q.delete("t");
+  history.replaceState(null, "", `${location.pathname}?${q}`);
+}
 
 const api = path => `https://api.github.com/repos/${REPO}/contents/${path}?ref=${BRANCH}`;
 const headers = extra => ({ Authorization: `Bearer ${token()}`, "X-GitHub-Api-Version": "2022-11-28", ...extra });
@@ -108,7 +113,11 @@ async function loadLatest() {
     headers: headers({ Accept: "application/vnd.github.raw" }) }).catch(() => null);
   if (pending) return;
   if (res && res.ok) show(URL.createObjectURL(await res.blob()));
-  else if (res && res.status === 401) { forgetToken(); $("photo").textContent = "token not accepted, reload to try again"; }
+  else if (res && res.status === 401) {
+    forgetToken();
+    $("photo").textContent = "GitHub didn't accept the token. Tap here to paste it again.";
+    $("photo").onclick = () => { $("photo").onclick = null; loadLatest(); };
+  }
   else if (res && res.status === 404) $("photo").textContent = "no photo yet";
 }
 loadLatest();
