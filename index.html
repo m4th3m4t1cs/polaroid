@@ -893,33 +893,54 @@ function sdfGeometry(sdf, size, res = 56) {
   return g;
 }
 
-function furMaterial({ color, length, density, layer, tabby = 0, breath = 0, roughness = 1 }) {
+function furMaterial({ color, length, density, layer, tabby = 0, breath = 0, roughness = 1, ring = 0, muzzle = null, rim = 0.35 }) {
   const m = new THREE.MeshStandardMaterial({ color, roughness });
-  const u = { uLayer: { value: layer }, uLen: { value: length }, uDensity: { value: density }, uTime: { value: 0 }, uTabby: { value: tabby }, uBreath: { value: breath } };
+  const u = {
+    uLayer: { value: layer }, uLen: { value: length }, uDensity: { value: density }, uTime: { value: 0 },
+    uTabby: { value: tabby }, uBreath: { value: breath }, uRing: { value: ring }, uRim: { value: rim },
+    uMuzzle: { value: muzzle || new THREE.Vector3(99, 99, 99) },
+  };
   m.userData.u = u;
   m.onBeforeCompile = sh => {
     Object.assign(sh.uniforms, u);
     sh.vertexShader = sh.vertexShader
-      .replace("#include <common>", "#include <common>\nuniform float uLayer, uLen, uTime, uBreath; varying vec3 vFur;")
+      .replace("#include <common>", "#include <common>\nuniform float uLayer, uLen, uTime, uBreath, uRing; varying vec3 vFur;")
       .replace("#include <begin_vertex>", `#include <begin_vertex>
         vFur = position;
-        float br = uBreath * (0.5 + 0.5 * sin(uTime * 1.6)) * smoothstep(0.0, 0.09, position.y);
-        transformed += normal * (uLen * uLayer + br) + vec3(0.0, -uLen * uLayer * uLayer * 0.35, 0.0);`);
+        float br = uBreath * (0.5 + 0.5 * sin(uTime * 1.5)) * smoothstep(0.0, 0.09, position.y);
+        // fur lies down: combed along the body (round the curl for the cat), drooping a little
+        vec3 tang = normalize(vec3(-position.z, 0.0, position.x) + 1e-5);
+        vec3 comb = mix(vec3(0.0, -0.35, 0.0), tang * 0.9 + vec3(0.0, -0.25, 0.0), uRing);
+        transformed += normal * (uLen * uLayer + br) + comb * uLen * uLayer * uLayer;`);
     sh.fragmentShader = sh.fragmentShader
-      .replace("#include <common>", "#include <common>\nuniform float uLayer, uDensity, uTabby; varying vec3 vFur;\nfloat fh(vec3 p){ return fract(sin(dot(p, vec3(12.9898, 78.233, 37.719))) * 43758.5453); }\nfloat vn(vec3 p){ vec3 i = floor(p), f = fract(p); f = f*f*(3.-2.*f); return mix(mix(mix(fh(i), fh(i+vec3(1,0,0)), f.x), mix(fh(i+vec3(0,1,0)), fh(i+vec3(1,1,0)), f.x), f.y), mix(mix(fh(i+vec3(0,0,1)), fh(i+vec3(1,0,1)), f.x), mix(fh(i+vec3(0,1,1)), fh(i+vec3(1,1,1)), f.x), f.y), f.z); }")
+      .replace("#include <common>", `#include <common>
+        uniform float uLayer, uDensity, uTabby, uRing, uRim; uniform vec3 uMuzzle; varying vec3 vFur;
+        float fh(vec3 p){ return fract(sin(dot(p, vec3(12.9898, 78.233, 37.719))) * 43758.5453); }
+        float vn(vec3 p){ vec3 i = floor(p), f = fract(p); f = f*f*(3.-2.*f); return mix(mix(mix(fh(i), fh(i+vec3(1,0,0)), f.x), mix(fh(i+vec3(0,1,0)), fh(i+vec3(1,1,0)), f.x), f.y), mix(mix(fh(i+vec3(0,0,1)), fh(i+vec3(1,0,1)), f.x), mix(fh(i+vec3(0,1,1)), fh(i+vec3(1,1,1)), f.x), f.y), f.z); }`)
       .replace("#include <color_fragment>", `#include <color_fragment>
         vec3 cp = vFur * uDensity; vec3 cell = floor(cp); vec3 fr = fract(cp) - 0.5;
         float r = fh(cell);
         if (uLayer > 0.01) {
-          if (r < uLayer * 0.85 + 0.08) discard;
-          if (length(fr) > (1.05 - uLayer) * 0.62) discard;
+          if (r < uLayer * 0.92 + 0.04) discard;                       // strands of different lengths
+          if (length(fr) > (1.0 - uLayer) * 0.58 + 0.04) discard;      // each strand thins to a tip
         }
-        float mark = smoothstep(0.52, 0.72, vn(vFur * vec3(26.0, 70.0, 26.0)) * 0.7 + vn(vFur * 90.0) * 0.3);
-        float back = smoothstep(0.03, 0.16, vFur.y);                    // darker along the back, paler underneath
-        diffuseColor.rgb *= mix(1.0, mix(0.82, 0.45, mark) * mix(1.12, 0.92, back), uTabby);
-        diffuseColor.rgb *= mix(0.38, 1.08, pow(uLayer, 0.8)) * (0.9 + 0.2 * r);`);
+        // grey tabby: stripes wrapping round the curled body, dark along the back, pale muzzle and paws
+        float ang = atan(vFur.z, vFur.x);
+        float wob = vn(vFur * 40.0) * 2.6 + vn(vFur * 110.0) * 0.8;
+        float stripe = smoothstep(0.5, 0.92, sin(ang * 13.0 + wob) * 0.5 + 0.5) * smoothstep(0.25, 0.6, vn(vFur * 55.0)) * mix(1.0, 0.5, smoothstep(0.09, 0.02, vFur.y));
+        float blotch = smoothstep(0.55, 0.75, vn(vFur * vec3(26.0, 70.0, 26.0)));
+        float mark = mix(blotch, stripe, uRing);
+        float back = smoothstep(0.04, 0.15, vFur.y);
+        float pale = smoothstep(0.045, 0.0, distance(vFur, uMuzzle));
+        vec3 tint = mix(vec3(1.0), mix(vec3(1.05, 1.05, 1.07), vec3(0.52, 0.5, 0.5), mark) * mix(1.12, 0.88, back), uTabby);
+        tint = mix(tint, vec3(1.35, 1.33, 1.3), pale * uTabby);
+        diffuseColor.rgb *= tint;
+        diffuseColor.rgb *= mix(0.32, 1.1, pow(uLayer, 0.7)) * (0.85 + 0.3 * r);   // darker at the roots`)
+      .replace("#include <emissivemap_fragment>", `#include <emissivemap_fragment>
+        float facing = abs(dot(normal, normalize(vViewPosition)));
+        totalEmissiveRadiance += diffuseColor.rgb * uRim * pow(1.0 - facing, 3.0) * uLayer;   // light catching the fur's edge`);
   };
-  m.customProgramCacheKey = () => "fur";
+  m.customProgramCacheKey = () => "fur2";
   return m;
 }
 const furMats = [];
@@ -937,40 +958,78 @@ function furry(geo, opts, layers, parent) {
 }
 
 function buildCat() {
-  // a grey tabby curled up asleep, nose tucked against her tail
-  const R = 0.1, a0 = 0.55, a1 = 5.65, ha = 5.98;
-  const hc = [Math.cos(ha) * R * 0.92, 0.112, Math.sin(ha) * R * 0.92];
-  const fw = [-Math.sin(ha), 0, Math.cos(ha)], side = [Math.cos(ha), 0, Math.sin(ha)];
-  const mz = [hc[0] + fw[0] * 0.04, hc[1] - 0.016, hc[2] + fw[2] * 0.04];
-  const ear = s => [hc[0] + side[0] * s * 0.027 - fw[0] * 0.008, hc[1] + 0.03, hc[2] + side[2] * s * 0.027 - fw[2] * 0.008];
-  const e1 = ear(-1), e2 = ear(1);
+  // a grey tabby curled up asleep, chin on her paws, tail wrapped round her nose
+  // body curls in a "C" from the rump (a0) round to the shoulders (a1); head tucked in at the end
+  const R = 0.095, a0 = 0.95, a1 = 4.35, ha = 5.12;
+  const side = new THREE.Vector3(Math.cos(ha), 0, Math.sin(ha));    // outward from the curl
+  const fw = new THREE.Vector3(-Math.sin(ha), 0, Math.cos(ha)).addScaledVector(side, -0.45).normalize();   // face, turned in toward her tail
+  const up = new THREE.Vector3(0, 1, 0);
+  const hc = new THREE.Vector3(Math.cos(ha) * 0.078, 0.088, Math.sin(ha) * 0.078);
+  const P_ = (...terms) => terms.reduce((a, [v, k]) => a.addScaledVector(v, k), hc.clone());
+  const pad = s => P_([fw, 0.04], [side, s * 0.011], [up, -0.014]);
+  const paw = s => [P_([fw, -0.01], [side, s * 0.02], [up, -0.062]), P_([fw, 0.05], [side, s * 0.022], [up, -0.066])];
   const sdf = (x, y, z) => {
-    // body: a fat loaf bent into a ring
     let th = Math.atan2(z, x); if (th < 0) th += Math.PI * 2;
     let tc = th; if (th < a0 || th > a1) tc = (th < a0 ? (a0 - th < th + Math.PI * 2 - a1 ? a0 : a1) : (th - a1 < a0 + Math.PI * 2 - th ? a1 : a0));
-    const t = (tc - a0) / (a1 - a0), r = 0.064 + 0.014 * Math.sin(t * Math.PI) + 0.006 * (1 - t);
-    const dx = x - Math.cos(tc) * R, dy = (y - 0.066) / 0.8, dz = z - Math.sin(tc) * R;
-    let d = Math.hypot(dx, dy, dz) - r;
-    d = smin(d, sdEll(x, y, z, 0, 0.062, 0, 0.095, 0.058, 0.09), 0.03);
-    // head resting on top, muzzle, ears
-    d = smin(d, sdEll(x, y, z, hc[0], hc[1], hc[2], 0.05, 0.043, 0.052), 0.02);
-    d = smin(d, sdSphere(x, y, z, ...mz, 0.024), 0.012);
-    d = smin(d, sdCone(x, y, z, e1[0], e1[1], e1[2], 0.034, 0.017), 0.006);
-    d = smin(d, sdCone(x, y, z, e2[0], e2[1], e2[2], 0.034, 0.017), 0.006);
-    // tail wrapped round the outside, past her nose
-    let tt = Math.atan2(z, x); const tcl = THREE.MathUtils.clamp(tt, -1.25, 0.6), u = (0.6 - tcl) / 1.85;
-    const tr = 0.024 - 0.008 * u;
-    d = smin(d, Math.hypot(x - Math.cos(tcl) * 0.158, y - 0.026, z - Math.sin(tcl) * 0.158) - tr, 0.012);
+    const t = (tc - a0) / (a1 - a0), rr = 0.066 + 0.012 * Math.sin(t * Math.PI) - 0.008 * t;
+    let d = Math.hypot((x - Math.cos(tc) * R) / 1.0, (y - 0.06) / 0.78, z - Math.sin(tc) * R) - rr;     // the curled back
+    const hx = Math.cos(1.2) * 0.1, hz = Math.sin(1.2) * 0.1;
+    d = smin(d, sdEll(x, y, z, hx, 0.056, hz, 0.062, 0.05, 0.07), 0.025);                             // haunch
+    d = smin(d, sdEll(x, y, z, hc.x, hc.y, hc.z, 0.046, 0.04, 0.047), 0.012);                        // head
+    for (const s of [-1, 1]) {
+      const pp = pad(s); d = smin(d, sdSphere(x, y, z, pp.x, pp.y, pp.z, 0.016), 0.008);     // whisker pads
+      const [pa, pb] = paw(s); d = smin(d, sdCap(x, y, z, pa.x, pa.y, pa.z, pb.x, pb.y, pb.z, 0.016), 0.012);  // front paws
+    }
+    const tcl = THREE.MathUtils.clamp(Math.atan2(z, x), -1.75, 0.75), u = (0.75 - tcl) / 2.5;
+    d = smin(d, Math.hypot(x - Math.cos(tcl) * 0.15, y - 0.022, z - Math.sin(tcl) * 0.15) - (0.021 - 0.007 * u), 0.01);   // tail round past her nose
     return d;
   };
-  const geo = sdfGeometry(sdf, 0.44, 54);
+  const geo = sdfGeometry(sdf, 0.42, 64);
   const cat = new THREE.Group();
   cat.position.set(0.42, onBed(0.42, 0.0, 0.03), 0.0); cat.rotation.y = 2.4;
   scene.add(cat);
-  const opts = { color: 0xa2a4aa, length: 0.013, density: 1400, tabby: 1, breath: 0.004 };
-  furry(geo, opts, 16, cat);
-  add(new THREE.SphereGeometry(0.0055, 10, 8), new THREE.MeshStandardMaterial({ color: 0xc78a88, roughness: 0.4 }),
-    mz[0] + fw[0] * 0.023, mz[1] + 0.004, mz[2] + fw[2] * 0.023, 0, 0, 0, cat);
+  const muz = P_([fw, 0.04], [up, -0.018]);
+  const opts = { color: 0x9c9ea5, length: 0.011, density: 2600, tabby: 1, breath: 0.0035, ring: 1, muzzle: muz, rim: 0.5 };
+  furry(geo, opts, 24, cat);
+
+  // ears: furry outside, pink and fluffy inside, twitching now and then
+  const ears = [];
+  for (const s of [-1, 1]) {
+    const ear = new THREE.Group();
+    ear.position.copy(P_([side, s * 0.027], [fw, -0.006], [up, 0.031]));
+    ear.lookAt(cat.localToWorld(ear.position.clone().add(up).addScaledVector(fw, 0.25).addScaledVector(side, s * 0.35)));
+    cat.add(ear);
+    const outer = new THREE.ConeGeometry(0.018, 0.034, 4, 1, true); outer.rotateX(Math.PI / 2); outer.translate(0, 0, 0.016);
+    furry(outer, { ...opts, length: 0.004, ring: 0, muzzle: null, breath: 0, rim: 0.6 }, 6, ear);
+    const inner = new THREE.Mesh(new THREE.CircleGeometry(0.012, 3), new THREE.MeshStandardMaterial({ color: 0xd9a3a0, roughness: 0.6, side: THREE.DoubleSide }));
+    inner.position.set(0, -0.004, 0.016); inner.rotation.set(0, Math.PI / 2 + 0.3, Math.PI / 2); inner.scale.set(1, 1.4, 1);
+    ear.add(inner);
+    ears.push(ear);
+  }
+  let twitchAt = 4 + Math.random() * 6;
+  animators.push(t => {
+    if (t > twitchAt) { twitchAt = t + 5 + Math.random() * 9; ears.forEach(e => (e.userData.k = t)); }
+    ears.forEach((e, i) => { const k = t - (e.userData.k ?? -9); e.rotation.z = (i ? 1 : -1) * 0.35 * Math.exp(-k * 9) * Math.sin(k * 40); });
+  });
+
+  // sleeping face: closed eyes, pink nose, whiskers
+  const lid = new THREE.MeshStandardMaterial({ color: 0x1e1b19, roughness: 0.7 });
+  for (const s of [-1, 1]) {
+    const c = P_([fw, 0.039], [side, s * 0.018], [up, 0.008]);
+    const arc = new THREE.CatmullRomCurve3([-1, 0, 1].map(k => c.clone().addScaledVector(side, s * k * 0.009).addScaledVector(up, -Math.abs(k) * 0.002 + 0.001)));
+    cat.add(new THREE.Mesh(new THREE.TubeGeometry(arc, 8, 0.0011, 4), lid));
+  }
+  const nose = new THREE.Mesh(new THREE.ConeGeometry(0.0055, 0.006, 3), new THREE.MeshStandardMaterial({ color: 0xc7837f, roughness: 0.35 }));
+  nose.position.copy(P_([fw, 0.052], [up, -0.006])); nose.lookAt(cat.localToWorld(nose.position.clone().add(fw))); nose.rotateX(Math.PI / 2);
+  cat.add(nose);
+  const wpts = [];
+  for (const s of [-1, 1]) for (let k = 0; k < 5; k++) {
+    const a = pad(s).addScaledVector(side, s * 0.008);
+    const b = a.clone().addScaledVector(side, s * (0.05 + k * 0.004)).addScaledVector(fw, 0.012 - k * 0.006).addScaledVector(up, 0.006 - k * 0.004);
+    wpts.push(a, b);
+  }
+  const wg = new THREE.BufferGeometry().setFromPoints(wpts);
+  cat.add(new THREE.LineSegments(wg, new THREE.LineBasicMaterial({ color: 0xf2efe8, transparent: true, opacity: 0.7 })));
   focusTargets.push(cat.children[0].children[0]);
 }
 
