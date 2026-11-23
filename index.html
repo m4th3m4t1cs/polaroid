@@ -875,8 +875,10 @@ function contactShadow(x, z, rx, rz, strength, heightFn = topH) {
 }
 
 // Pillow: two puffed halves meeting at a sharp seam, creased, sinking into what's under it.
+const pillows = [];
 function addPillow(x, y, z, w, d, t, tilt, yaw, texName, color, _unused, sheen) {
   const grp = new THREE.Group(); grp.position.set(x, y, z); grp.rotation.set(tilt, yaw, 0); scene.add(grp);
+  grp.userData.punch = { s: 0, v: 0, base: grp.position.clone() }; pillows.push(grp);
   const m = pbr(texName, { repeat: [w * 3, d * 3], color, normal: 1, side: THREE.DoubleSide, sheen });
   for (const s of [1, -1]) {
     const g = new THREE.PlaneGeometry(w, d, 44, 32), p = g.attributes.position;
@@ -1204,7 +1206,7 @@ async function loadModel(name, { x, y = 0, z, ry = 0, scale = 1, bed = false, si
   } catch (e) { console.warn("model", name, e); }
 }
 function buildModels() {
-  loadModel("throw_pillows_01", { x: -0.72, z: 0.06, ry: 0.5, bed: true, sink: 0.035 });
+  loadModel("throw_pillows_01", { x: -0.72, z: 0.06, ry: 0.5, bed: true, sink: 0.035 }).then(m => { if (m) { m.userData.punch = { s: 0, v: 0, base: m.position.clone(), axis: "y" }; pillows.push(m); } });
   loadModel("rubber_duck_toy", { x: 0.2, z: 0.3, ry: 2.4, scale: 0.34, bed: true, sink: 0.012 });
   loadModel("ArmChair_01", { x: 2.62, z: 2.45, ry: -2.35 });
   loadModel("Ottoman_01", { x: 1.95, z: 2.05, ry: 0.4, scale: 0.72 });
@@ -1929,6 +1931,16 @@ canvas.addEventListener("pointerdown", e => {
       if (d < best) { best = d; id = pid; }
     }
   }
+  if (id == null) {
+    const hit = raycaster.intersectObjects(pillows, true)[0];
+    if (hit) {   // punch! the pillow squashes where you hit it and springs back
+      let o = hit.object; while (!o.userData.punch) o = o.parent;
+      o.userData.punch.v -= 7; o.userData.punch.hitAt = performance.now();
+      if (navigator.vibrate) navigator.vibrate(18);
+      lookDrag = { x: e.clientX, y: e.clientY, lx: e.clientX, ly: e.clientY, t: performance.now() };
+      return;
+    }
+  }
   if (id == null) {   // nothing to grab: look around
     lookDrag = { x: e.clientX, y: e.clientY, lx: e.clientX, ly: e.clientY, t: performance.now() };
     look.vy = look.vp = 0;
@@ -1970,6 +1982,18 @@ function applyGrab() {
   p.x += (grab.target.x - p.x) * 0.3; p.y += (grab.target.y - p.y) * 0.3; p.z += (grab.target.z - p.z) * 0.3;
   p.z = Math.max(p.z, WALL_Z + 0.01);
 }
+
+animators.push((t, dt) => {
+  for (const o of pillows) {
+    const p = o.userData.punch;
+    p.v += (-160 * p.s - 9 * p.v) * dt;          // damped spring: squash, overshoot, settle
+    p.s += p.v * dt;
+    const k = THREE.MathUtils.clamp(p.s, -0.45, 0.35);
+    if (p.axis === "y") o.scale.set(1 - k * 0.35, 1 + k, 1 - k * 0.35); else o.scale.set(1 - k * 0.35, 1 - k * 0.35, 1 + k);   // flatten along the thickness, spread sideways
+    o.position.copy(p.base).y += k * 0.03;
+  }
+});
+window.__punch = i => { pillows[i].userData.punch.v -= 7; };
 
 window.__screen = () => {
   const toPx = v => { v.project(camera); return [(v.x + 1) / 2 * innerWidth, (1 - v.y) / 2 * innerHeight]; };
