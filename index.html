@@ -31,6 +31,7 @@
   button:disabled { opacity: .5; }
   .status { font-size: 14px; min-height: 1.2em; color: #c9c0b6; }
   input[type=file] { display: none; }
+  button.invite { font-size: 13px; color: #8f857b; background: none; padding: 4px; text-decoration: underline; }
 </style>
 </head>
 <body>
@@ -42,6 +43,7 @@
     <button id="cancel" hidden>Cancel</button>
   </div>
   <div class="status" id="status"></div>
+  <button class="invite" id="invite"></button>
 
 <script>
 // Photos are stored in this repo, on the "photos" branch.
@@ -63,8 +65,10 @@ if (!PEOPLE.includes(ME)) {
 const THEM = PEOPLE.find(p => p !== ME);
 
 // GitHub token: pasted once per phone, kept only on that phone (never in the repo).
+// A link ending in #t=<token> carries it, so the receiver doesn't need to paste anything.
 function token() {
-  let t = "";
+  let t = new URLSearchParams(location.hash.slice(1)).get("t") || "";
+  if (t) { try { localStorage.setItem("gh_token", t); } catch {} return t; }
   try { t = localStorage.getItem("gh_token") || ""; } catch {}
   if (!t) {
     t = (prompt("Paste the GitHub access token (one time only):") || "").trim();
@@ -141,6 +145,18 @@ $("send").onclick = async () => {
     $("status").textContent = "Send failed: " + err.message;
   }
   $("send").disabled = false;
+};
+
+// Share a ready-to-use link for the other person (includes the token).
+$("invite").textContent = `Send ${THEM} their link`;
+$("invite").onclick = async () => {
+  const url = `${location.origin}${location.pathname}?me=${THEM}#t=${token()}`;
+  try { await navigator.share({ url }); }
+  catch (e) {
+    if (e.name === "AbortError") return;
+    try { await navigator.clipboard.writeText(url); $("status").textContent = "Link copied"; }
+    catch { prompt("Copy this link:", url); }
+  }
 };
 
 function setMode(previewing) {
