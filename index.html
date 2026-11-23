@@ -31,6 +31,13 @@
   button:disabled { opacity: .5; }
   .status { font-size: 14px; min-height: 1.2em; color: #c9c0b6; }
   input[type=file] { display: none; }
+  .hint {
+    position: fixed; left: 12px; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom));
+    background: #fbf9f5; color: #2b2724; border-radius: 14px; padding: 14px 40px 14px 16px;
+    font-size: 15px; line-height: 1.4; box-shadow: 0 8px 24px rgba(0,0,0,.4);
+  }
+  .hint b { white-space: nowrap; }
+  .hint button { position: absolute; top: 6px; right: 6px; background: none; padding: 6px 10px; font-size: 18px; color: #8f857b; }
   button.invite { font-size: 13px; color: #8f857b; background: none; padding: 4px; text-decoration: underline; }
 </style>
 </head>
@@ -44,6 +51,10 @@
   </div>
   <div class="status" id="status"></div>
   <button class="invite" id="invite"></button>
+  <div class="hint" id="hint" hidden>
+    Keep this on your home screen: tap <b>Share ⬆︎</b>, then <b>Add to Home Screen</b>.
+    <button id="hideHint" aria-label="Close">✕</button>
+  </div>
 
 <script>
 // Photos are stored in this repo, on the "photos" branch.
@@ -65,9 +76,9 @@ if (!PEOPLE.includes(ME)) {
 const THEM = PEOPLE.find(p => p !== ME);
 
 // GitHub token: pasted once per phone, kept only on that phone (never in the repo).
-// A link ending in #t=<token> carries it, so the receiver doesn't need to paste anything.
+// A link with &t=<token> carries it, so the receiver doesn't need to paste anything.
 function token() {
-  let t = new URLSearchParams(location.hash.slice(1)).get("t") || "";
+  let t = new URLSearchParams(location.search).get("t") || new URLSearchParams(location.hash.slice(1)).get("t") || "";
   if (t) { try { localStorage.setItem("gh_token", t); } catch {} return t; }
   try { t = localStorage.getItem("gh_token") || ""; } catch {}
   if (!t) {
@@ -150,7 +161,7 @@ $("send").onclick = async () => {
 // Share a ready-to-use link for the other person (includes the token).
 $("invite").textContent = `Send ${THEM} their link`;
 $("invite").onclick = async () => {
-  const url = `${location.origin}${location.pathname}?me=${THEM}#t=${token()}`;
+  const url = `${location.origin}${location.pathname}?me=${THEM}&t=${encodeURIComponent(token())}`;
   try { await navigator.share({ url }); }
   catch (e) {
     if (e.name === "AbortError") return;
@@ -158,6 +169,12 @@ $("invite").onclick = async () => {
     catch { prompt("Copy this link:", url); }
   }
 };
+
+// On iPhone Safari (not already opened from the home screen), show how to add it.
+const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+let hintSeen = false; try { hintSeen = localStorage.getItem("hint_seen") === "1"; } catch {}
+if (isIOS && !navigator.standalone && !hintSeen) $("hint").hidden = false;
+$("hideHint").onclick = () => { $("hint").hidden = true; try { localStorage.setItem("hint_seen", "1"); } catch {} };
 
 function setMode(previewing) {
   $("send").hidden = $("cancel").hidden = !previewing;
