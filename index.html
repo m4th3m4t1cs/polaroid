@@ -1212,6 +1212,194 @@ function buildModels() {
   loadModel("mantel_clock_01", { x: FIRE.x - 0.2, y: 1.29, z: FIRE.z - 0.05, ry: -Math.PI / 2 });
 }
 
+/* ---------- Furniture and things two girls actually live with ---------- */
+const topOf = o => new THREE.Box3().setFromObject(o).max.y;
+function buildFurniture() {
+  const LW = RX0 + 0.005, FW = RZ1 - 0.005;          // left wall, front wall surfaces
+  const paintWood = new THREE.MeshStandardMaterial({ color: 0xf2ebe0, roughness: 0.55 });
+  const brass = new THREE.MeshStandardMaterial({ color: 0xc9a24a, metalness: 1, roughness: 0.3 });
+
+  /* --- door (front wall, by the bunk), with a dressing gown on a hook --- */
+  const dx = -0.5, dw = 0.84, dh = 2.04;
+  const slab = new THREE.Group(); slab.position.set(dx, 0, FW - 0.02); scene.add(slab);
+  focusTargets.push(add(new THREE.BoxGeometry(dw, dh, 0.04), paintWood, 0, dh / 2, 0, 0, 0, 0, slab));
+  for (const [py, ph] of [[0.45, 0.62], [1.42, 0.82]]) for (const sx of [-1, 1])
+    add(new THREE.BoxGeometry(0.3, ph, 0.012), paintWood, sx * 0.19, py, -0.024, 0, 0, 0, slab);
+  add(new THREE.SphereGeometry(0.028, 20, 14), brass, dw / 2 - 0.08, 1.0, -0.05, 0, 0, 0, slab);
+  add(new THREE.CylinderGeometry(0.03, 0.03, 0.012, 20), brass, dw / 2 - 0.08, 1.0, -0.024, Math.PI / 2, 0, 0, slab);
+  for (const sx of [-1, 1]) add(new THREE.BoxGeometry(0.07, dh + 0.07, 0.03), paintWood, dx + sx * (dw / 2 + 0.035), (dh + 0.07) / 2, FW - 0.015);
+  add(new THREE.BoxGeometry(dw + 0.14, 0.07, 0.03), paintWood, dx, dh + 0.035, FW - 0.015);
+  add(new THREE.CylinderGeometry(0.008, 0.008, 0.06, 10), brass, dx, 1.75, FW - 0.07, Math.PI / 2, 0, 0);
+  // fluffy robe hanging from the hook: a draped tube, pinched at the top, folds flaring toward the hem
+  const robe = new THREE.CylinderGeometry(1, 1, 1, 48, 40, true);
+  { const pp = robe.attributes.position;
+    for (let i = 0; i < pp.count; i++) {
+      const a = Math.atan2(pp.getZ(i), pp.getX(i)), v = 0.5 - pp.getY(i);            // v: 0 at hook → 1 at hem
+      const rw = 0.03 + 0.2 * Math.pow(v, 0.55), rd = 0.02 + 0.07 * Math.pow(v, 0.6);
+      const fold = 1 + 0.08 * Math.sin(a * 9 + v * 2) * v + 0.04 * Math.sin(a * 17) * v;
+      pp.setXYZ(i, dx + Math.cos(a) * rw * fold, 1.78 - v * 1.0, FW - 0.075 - Math.max(0, Math.sin(a)) * rd * fold * 0 - (Math.sin(a) + 1) * rd * fold * 0.5 - 0.01 * v);
+    }
+    robe.computeVertexNormals(); }
+  add(robe, pbr("curly_teddy_natural", { repeat: [2, 4], color: 0xf2c4cf, normal: 1, side: THREE.DoubleSide }));
+
+  /* --- study desk against the left wall, corkboard above --- */
+  loadModel("WoodenTable_03", { x: LW + 0.36, z: 1.55, ry: Math.PI / 2, scale: 0.92 }).then(desk => {
+    if (!desk) return;
+    const top = topOf(desk);
+    loadModel("desk_lamp_arm_01", { x: LW + 0.22, y: top, z: 1.05, ry: 0.9, scale: 0.75 }).then(lamp => {
+      if (!lamp) return;
+      const l = new THREE.PointLight(0xffc98a, 0.9, 3, 2); l.position.set(LW + 0.4, top + 0.42, 1.18); scene.add(l);
+      const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.018, 12, 8), new THREE.MeshBasicMaterial({ color: new THREE.Color(3, 2.4, 1.6), toneMapped: false }));
+      bulb.position.copy(l.position).add(new THREE.Vector3(0, -0.02, 0)); scene.add(bulb);
+    });
+    loadModel("classic_laptop", { x: LW + 0.38, y: top, z: 1.55, ry: Math.PI / 2 + 0.15, scale: 0.55 });
+    loadModel("calathea_orbifolia_01", { x: LW + 0.25, y: top, z: 2.12, ry: 0.4, scale: 0.75 });
+    [0xc96f7f, 0x6e8fb2, 0xe8c26a, 0x9db68e].forEach((c, i) =>
+      add(new THREE.BoxGeometry(0.22, 0.03, 0.16), new THREE.MeshStandardMaterial({ color: c, roughness: 0.7 }), LW + 0.5, top + 0.016 + i * 0.031, 1.95, 0, 0.3 + i * 0.25, 0));
+    // a mug with pens, a notebook open
+    add(new THREE.CylinderGeometry(0.035, 0.032, 0.09, 20, 1, true), new THREE.MeshStandardMaterial({ color: 0xe8b6b6, roughness: 0.4, side: THREE.DoubleSide }), LW + 0.18, top + 0.045, 1.33);
+    for (let k = 0; k < 4; k++) add(new THREE.CylinderGeometry(0.004, 0.004, 0.14, 6), new THREE.MeshStandardMaterial({ color: [0x223355, 0xc0392b, 0x111111, 0xf1c40f][k] }), LW + 0.18 + (k - 1.5) * 0.008, top + 0.1, 1.33 + (k % 2) * 0.01, (k - 1.5) * 0.12, 0, (k - 1.5) * 0.1);
+    add(new THREE.BoxGeometry(0.21, 0.006, 0.15), new THREE.MeshStandardMaterial({ color: 0xfaf6ee, roughness: 0.9 }), LW + 0.62, top + 0.003, 1.3, 0, -0.2, 0);
+  });
+  loadModel("painted_wooden_chair_01", { x: LW + 0.85, z: 1.5, ry: -Math.PI / 2 + 0.25 }).then(chair => {
+    if (!chair) return;
+    // an oversized cardigan slung over the back of the chair
+    const c = surface(-0.22, 0.22, -0.3, 0.3, 24, 30, (x, z) => 0.015 * fbm(x * 9, z * 9));
+    const pp = c.attributes.position;
+    for (let i = 0; i < pp.count; i++) { const x = pp.getX(i), z = pp.getZ(i), fold = Math.max(0, z) * 2.4;
+      pp.setXYZ(i, x, 0.9 - Math.max(0, z) * 1.3 + pp.getY(i), -0.04 + Math.min(z, 0) * 0.5 + 0.02 * Math.sin(x * 20) * fold); }
+    c.computeVertexNormals();
+    const m = add(c, pbr("knitted_fleece", { repeat: [1.5, 1.5], color: new THREE.Color(2.6, 2.0, 2.9), normal: 1.6, side: THREE.DoubleSide }), LW + 1.02, 0, 1.5, 0, -Math.PI / 2 + 0.25, 0);
+    void m;
+  });
+  buildCorkboard(LW, 1.48, 1.55);
+
+  /* --- makeup desk with a lit mirror (front wall) --- */
+  const vx = 1.15;
+  loadModel("small_wooden_table_01", { x: vx, z: FW - 0.25, ry: Math.PI, scale: 1.35 }).then(t => {
+    if (!t) return;
+    const top = topOf(t);
+    // bottles, lipsticks, a brush cup, a palette, scrunchies
+    const glass = new THREE.MeshPhysicalMaterial({ color: 0xffd6e0, roughness: 0.05, transmission: 0.0, transparent: true, opacity: 0.55 });
+    [[-0.35, 0.09, 0.03, 0xf7c6d4], [-0.28, 0.12, 0.024, 0xd9e8ff], [-0.2, 0.07, 0.035, 0xfff1c9]].forEach(([ox, hgt, rad, col]) => {
+      add(new THREE.CylinderGeometry(rad, rad, hgt, 20), new THREE.MeshPhysicalMaterial({ color: col, roughness: 0.05, transparent: true, opacity: 0.6 }), vx + ox, top + hgt / 2, FW - 0.2);
+      add(new THREE.CylinderGeometry(rad * 0.45, rad * 0.45, 0.025, 14), brass, vx + ox, top + hgt + 0.012, FW - 0.2);
+    });
+    void glass;
+    for (let k = 0; k < 4; k++) add(new THREE.CylinderGeometry(0.008, 0.008, 0.06, 12), new THREE.MeshStandardMaterial({ color: [0x9e1b32, 0xd4787e, 0x111111, 0xc89b6d][k], roughness: 0.3, metalness: 0.4 }), vx + 0.05 + k * 0.022, top + 0.03, FW - 0.33);
+    add(new THREE.CylinderGeometry(0.035, 0.035, 0.1, 20, 1, true), new THREE.MeshStandardMaterial({ color: 0xf2e4d8, roughness: 0.5, side: THREE.DoubleSide }), vx + 0.3, top + 0.05, FW - 0.2);
+    for (let k = 0; k < 5; k++) add(new THREE.CylinderGeometry(0.004, 0.002, 0.16, 6), new THREE.MeshStandardMaterial({ color: 0x2b2b2b }), vx + 0.3 + (k - 2) * 0.008, top + 0.12, FW - 0.2, (k - 2) * 0.1, 0, (k - 2) * 0.12);
+    add(new THREE.BoxGeometry(0.16, 0.012, 0.1), new THREE.MeshStandardMaterial({ color: 0x1b1b1b, roughness: 0.3 }), vx - 0.02, top + 0.006, FW - 0.33, 0, 0.2, 0);
+    [0xf4a7b9, 0xfff3d6, 0x9ec5a5].forEach((c, k) => add(new THREE.TorusGeometry(0.022, 0.01, 10, 20), pbr("velour_velvet", { color: c, normal: 0.6 }), vx + 0.18 + k * 0.05, top + 0.01, FW - 0.36 + k * 0.02, Math.PI / 2, 0, k));
+    // vanity mirror with warm bulbs round it
+    loadModel("ornate_mirror_01", { x: vx, y: top + 0.18, z: FW - 0.03, ry: Math.PI, scale: 1 }).then(mr => {
+      if (!mr) return;
+      const b = new THREE.Box3().setFromObject(mr), cy = (b.min.y + b.max.y) / 2, hw = (b.max.x - b.min.x) / 2 + 0.05, hh = (b.max.y - b.min.y) / 2 + 0.03;
+      const bulbMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(2.6, 2.2, 1.7), toneMapped: false });
+      for (let k = 0; k < 4; k++) for (const sx of [-1, 1]) add(new THREE.SphereGeometry(0.018, 14, 10), bulbMat, vx + sx * hw, cy - hh + 0.1 + k * (hh * 2 - 0.2) / 3, FW - 0.04, 0, 0, 0, scene, false);
+      const vl = new THREE.PointLight(0xffd7a8, 0.8, 2.6, 2); vl.position.set(vx, cy, FW - 0.25); scene.add(vl);
+    });
+  });
+  // a little gingham stool for the vanity
+  add(new RoundedBoxGeometry(0.4, 0.42, 0.4, 5, 0.08), pbr("gingham_check", { repeat: [1, 1], color: 0xffd9e0, normal: 0.6 }), vx, 0.21, FW - 0.75, 0, 0.2, 0);
+
+  /* --- tall bookshelf + wall clock + framed print --- */
+  loadModel("Shelf_01", { x: 2.35, z: FW - 0.14, ry: Math.PI, scale: 0.95 }).then(sh => {
+    if (!sh) return;
+    // fill it: rows of books, a jar of fairy lights, a small plant, a plush, photo frames
+    const b = new THREE.Box3().setFromObject(sh), H = b.max.y - b.min.y, x0 = b.min.x + 0.06, x1 = b.max.x - 0.06, zc = (b.min.z + b.max.z) / 2 - 0.02;
+    const cols = [0x8e3b46, 0x2f4a6d, 0xe1b45a, 0x6b8f71, 0xc77b5a, 0xf2e6d8, 0x3b3b48, 0xd98fa0, 0x9a7ab5, 0x5e8c9a];
+    [0.065, 0.245, 0.425, 0.6, 0.775].forEach((f, row) => {
+      const y = b.min.y + H * f + 0.012;
+      let x = x0 + Math.random() * 0.05;
+      const stop = row % 2 ? x1 - 0.3 : x1;
+      while (x < stop) {
+        const w = 0.02 + Math.random() * 0.03, h = 0.16 + Math.random() * 0.08, lean = x > stop - 0.08 ? 0.25 : 0;
+        add(new THREE.BoxGeometry(w, h, 0.15 + Math.random() * 0.04), new THREE.MeshStandardMaterial({ color: cols[Math.floor(Math.random() * cols.length)], roughness: 0.75 }), x + w / 2, y + h / 2, zc, 0, 0, lean);
+        x += w + 0.002;
+      }
+      if (row % 2) {   // something other than books at the end of every other shelf
+        if (row === 1) { const jar = add(new THREE.CylinderGeometry(0.05, 0.05, 0.16, 24), new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.05, transparent: true, opacity: 0.25 }), x1 - 0.12, y + 0.08, zc, 0, 0, 0, scene, false);
+          for (let k = 0; k < 14; k++) add(new THREE.SphereGeometry(0.004, 6, 4), new THREE.MeshBasicMaterial({ color: new THREE.Color(3, 2, 1), toneMapped: false }), x1 - 0.12 + (Math.random() - 0.5) * 0.07, y + 0.02 + Math.random() * 0.12, zc + (Math.random() - 0.5) * 0.07, 0, 0, 0, scene, false);
+          const jl = new THREE.PointLight(0xffb066, 0.15, 1.2, 2); jl.position.set(x1 - 0.12, y + 0.1, zc - 0.1); scene.add(jl); void jar; }
+        if (row === 3) makeBunny(x1 - 0.14, y, zc, [0, Math.PI + 0.4, 0], 0xf0c8d2);
+      }
+    });
+  });
+  loadModel("wall_clock", { x: 1.15, y: 2.18, z: FW - 0.03, ry: Math.PI });
+  loadModel("hanging_picture_frame_01", { x: RX1 - 0.02, y: 1.62, z: FIRE.z, ry: -Math.PI / 2, scale: 0.9 });
+  loadModel("potted_plant_04", { x: WIN.x1 - 0.2, y: WIN.y0, z: WALL_Z + 0.06, ry: 0.5 });
+
+  /* --- squashy bean bag by the rug, with a phone left on it --- */
+  const bg = new THREE.SphereGeometry(1, 72, 54), bp = bg.attributes.position;
+  for (let i = 0; i < bp.count; i++) {
+    let x = bp.getX(i), y = bp.getY(i), z = bp.getZ(i);
+    const n = 0.05 * fbm(x * 2.5, y * 2.5, z * 2.5) + 0.02 * Math.sin(x * 11 + z * 7) * Math.max(0, y);
+    const bulge = 1 + 0.25 * (1 - Math.abs(y));                                    // fat in the middle, slumped
+    x *= 0.4 * bulge + n; z *= 0.38 * bulge + n;
+    y = y > 0 ? y * 0.2 : y * 0.14;                                                 // low, squashy
+    y -= 0.1 * Math.exp(-((x + 0.06) ** 2 + z * z) / 0.035) * (y > 0 ? 1 : 0);     // where she sat
+    y += 0.12 * Math.exp(-((x - 0.3) ** 2 + z * z) / 0.03) * (y > 0 ? 1 : 0);      // the backrest bunched up
+    bp.setXYZ(i, x, y + 0.15, z);
+  }
+  bg.computeVertexNormals();
+  focusTargets.push(add(bg, pbr("velour_velvet", { repeat: [3, 2], color: 0x7d9cae, normal: 0.9, sheen: 0xcfe6f2 }), 0.55, 0, 2.55, 0, 0.6, 0));
+  add(new RoundedBoxGeometry(0.075, 0.008, 0.155, 3, 0.004), new THREE.MeshStandardMaterial({ color: 0x1a1a1f, roughness: 0.2, metalness: 0.5 }), 0.52, 0.28, 2.55, -0.2, 0.8, 0.08);
+
+  /* --- trailing pothos hanging by the window --- */
+  const hx = WIN.x1 + 0.35, hy = 2.0, hz = WALL_Z + 0.35;
+  add(new THREE.CylinderGeometry(0.004, 0.004, CEIL - hy - 0.1, 6), new THREE.MeshStandardMaterial({ color: 0x8a7a66 }), hx, (CEIL + hy + 0.1) / 2, hz);
+  add(new THREE.CylinderGeometry(0.09, 0.07, 0.13, 24), new THREE.MeshStandardMaterial({ color: 0xe9e1d3, roughness: 0.7 }), hx, hy + 0.06, hz);
+  const leaf = new THREE.MeshStandardMaterial({ color: 0x3f7a3a, roughness: 0.55, side: THREE.DoubleSide });
+  const vines = [];
+  for (let v = 0; v < 7; v++) {
+    const a = v / 7 * Math.PI * 2, len = 0.35 + Math.random() * 0.55, grp = new THREE.Group();
+    grp.position.set(hx + Math.cos(a) * 0.08, hy + 0.1, hz + Math.sin(a) * 0.08); scene.add(grp); vines.push({ grp, a, ph: Math.random() * 6 });
+    for (let k = 0; k < len / 0.06; k++) {
+      const lf = new THREE.Mesh(new THREE.SphereGeometry(0.028, 10, 6, 0, Math.PI), leaf);
+      lf.scale.set(1, 1.25, 0.2); lf.position.set(Math.cos(a) * 0.02 * k, -k * 0.06, Math.sin(a) * 0.02 * k);
+      lf.rotation.set(0.5 + (k % 2) * 0.6, a + (k % 2 ? 1 : -1) * 0.8, 0); grp.add(lf);
+    }
+  }
+  animators.push(t => vines.forEach(v => { v.grp.rotation.z = 0.04 * Math.sin(t * 0.6 + v.ph); v.grp.rotation.x = 0.03 * Math.sin(t * 0.45 + v.ph); }));
+}
+
+// Cork board with notes, photo prints, a ticket, a pressed flower and pins.
+function buildCorkboard(LW, cy, cz) {
+  const bw = 0.95, bh = 0.62;
+  const cork = canvasTexture(512, 340, (g, W, H) => {
+    g.fillStyle = "#b98a5a"; g.fillRect(0, 0, W, H);
+    for (let i = 0; i < 9000; i++) { g.fillStyle = `rgba(${Math.random() < 0.5 ? "70,40,15" : "235,200,150"},${Math.random() * 0.35})`; g.fillRect(Math.random() * W, Math.random() * H, 1 + Math.random() * 2, 1 + Math.random() * 2); }
+  });
+  const board = new THREE.Group(); board.position.set(LW + 0.012, cy, cz); board.rotation.y = Math.PI / 2; scene.add(board);
+  focusTargets.push(add(new THREE.BoxGeometry(bw, bh, 0.015), new THREE.MeshStandardMaterial({ map: cork, roughness: 0.95 }), 0, 0, 0, 0, 0, 0, board));
+  const frameM = pbr("oak_veneer_01", { color: 0xe8d2b4, normal: 0.6 });
+  for (const sy of [-1, 1]) add(new THREE.BoxGeometry(bw + 0.04, 0.02, 0.025), frameM, 0, sy * (bh / 2 + 0.01), 0.005, 0, 0, 0, board);
+  for (const sx of [-1, 1]) add(new THREE.BoxGeometry(0.02, bh, 0.025), frameM, sx * (bw / 2 + 0.01), 0, 0.005, 0, 0, 0, board);
+  const pinCols = [0xe74c3c, 0xf1c40f, 0x3498db, 0x2ecc71, 0xff8fb1];
+  const item = (w, h, x, y, rot, tex, col = 0xffffff) => {
+    add(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ map: tex || null, color: col, roughness: 0.8, side: THREE.DoubleSide }), x, y, 0.009 + Math.random() * 0.002, 0, 0, rot, board);
+    add(new THREE.SphereGeometry(0.007, 10, 8), new THREE.MeshStandardMaterial({ color: pinCols[Math.floor(Math.random() * 5)], roughness: 0.3 }), x, y + h / 2 - 0.015, 0.016, 0, 0, 0, board);
+  };
+  const note = (txt, col) => canvasTexture(200, 200, (g) => { g.fillStyle = col; g.fillRect(0, 0, 200, 200); g.fillStyle = "#3a3330"; g.font = "38px 'Great Vibes', cursive"; g.textAlign = "center"; txt.split("|").forEach((l, i) => g.fillText(l, 100, 70 + i * 46)); });
+  const photo = (seed) => canvasTexture(240, 290, (g) => {
+    g.fillStyle = "#f6f2ea"; g.fillRect(0, 0, 240, 290);
+    const gr = g.createLinearGradient(0, 0, 220, 220); const hues = [[255, 190, 170], [170, 200, 255], [200, 230, 180], [255, 220, 150]][seed % 4];
+    gr.addColorStop(0, `rgb(${hues})`); gr.addColorStop(1, `rgb(${hues.map(v => v * 0.55)})`);
+    g.fillStyle = gr; g.fillRect(14, 14, 212, 212);
+    g.fillStyle = "rgba(255,255,255,.5)"; g.beginPath(); g.arc(80 + seed * 20, 90, 30, 0, 7); g.fill();
+    g.fillStyle = "rgba(0,0,0,.25)"; g.beginPath(); g.ellipse(120, 200, 70, 30, 0, 0, 7); g.fill();
+  });
+  item(0.12, 0.12, -0.33, 0.14, 0.08, note("exam|thursday!!", "#fff3a6"));
+  item(0.11, 0.11, -0.15, -0.16, -0.12, note("pick up|cat food", "#ffc9d6"));
+  item(0.1, 0.12, 0.05, 0.12, -0.05, photo(1));
+  item(0.1, 0.12, 0.18, 0.1, 0.1, photo(2));
+  item(0.1, 0.12, 0.31, -0.12, -0.08, photo(3));
+  item(0.17, 0.06, -0.32, -0.12, 0.15, note("CONCERT|ADMIT ONE", "#cfe7ff"));
+  item(0.13, 0.09, 0.02, -0.15, 0.04, canvasTexture(260, 180, g => { g.fillStyle = "#fbf7ef"; g.fillRect(0, 0, 260, 180); g.strokeStyle = "#b9c8a8"; for (let i = 0; i < 9; i++) { g.beginPath(); g.moveTo(10, 20 + i * 18); g.lineTo(250, 20 + i * 18); g.stroke(); } g.fillStyle = "#3a3330"; g.font = "30px 'Great Vibes'"; g.fillText("love you bestie", 30, 100); }));
+  item(0.09, 0.09, 0.36, 0.17, 0.2, note("♡", "#e7d4ff"));
+}
+
 /* ---------- Dust drifting in the warm light ---------- */
 function buildDust() {
   const N = 160, pos = new Float32Array(N * 3), seed = [];
@@ -1754,7 +1942,7 @@ canvas.addEventListener("pointermove", e => {
   if (lookDrag) {
     const k = (camera.fov * Math.PI / 180) / innerHeight;
     const dx = (e.clientX - lookDrag.lx) * k, dy = (e.clientY - lookDrag.ly) * k;
-    look.yaw = THREE.MathUtils.clamp(look.yaw - dx, -1.1, 2.4);   // the room follows your finger
+    look.yaw = look.yaw - dx;   // the room follows your finger
     look.pitch = THREE.MathUtils.clamp(look.pitch + dy, -1.3, 0.55);
     look.vy = -dx; look.vp = dy;
     lookDrag.lx = e.clientX; lookDrag.ly = e.clientY;
@@ -1836,7 +2024,7 @@ function frame(now) {
 
   // look-around with a little inertia and an idle drift
   if (!lookDrag && view === "home") {
-    look.yaw = THREE.MathUtils.clamp(look.yaw + look.vy, -1.1, 2.4); look.pitch = THREE.MathUtils.clamp(look.pitch + look.vp, -1.3, 0.55);
+    look.yaw = look.yaw + look.vy; look.pitch = THREE.MathUtils.clamp(look.pitch + look.vp, -1.3, 0.55);
     look.vy *= 0.9; look.vp *= 0.9;
   }
   if (tween) {
@@ -1887,6 +2075,7 @@ function frame(now) {
     buildCat();
     buildToys();
     buildModels();
+    buildFurniture();
     buildDust();
     buildLights();
     buildComposer();
