@@ -122,6 +122,34 @@
   .hint b { white-space: nowrap; }
   .hint button { position: absolute; top: 6px; right: 6px; background: none; border: 0; padding: 6px 10px; font-size: 18px; color: var(--muted); }
 
+  .capInput {
+    position: absolute; left: 5.7%; right: 5.7%; bottom: 3%; height: 15%;
+    border: 0; background: transparent; outline: none; text-align: center;
+    font: clamp(24px, 7.5vw, 34px) var(--script); color: var(--ink);
+  }
+  .capInput::placeholder { color: rgba(43,36,32,.35); }
+  .capInput[hidden] { display: none; }
+  .filters { display: flex; gap: 8px; overflow-x: auto; max-width: 100%; padding: 2px 4px; scrollbar-width: none; }
+  .filters[hidden] { display: none; }
+  .filters button {
+    flex: none; display: flex; flex-direction: column; align-items: center; gap: 4px;
+    background: none; border: 0; color: var(--paper); font: 20px var(--script); cursor: pointer; opacity: .75;
+  }
+  .filters button.on { opacity: 1; }
+  .filters canvas { width: 54px; height: 54px; border-radius: 2px; box-shadow: 0 2px 6px rgba(0,0,0,.4); outline: 2px solid transparent; outline-offset: 2px; }
+  .filters button.on canvas { outline-color: var(--warm); }
+  .actions { display: flex; gap: 18px; }
+  .actions[hidden] { display: none; }
+  .icon {
+    width: 50px; height: 50px; border-radius: 50%; border: 0; cursor: pointer;
+    background: rgba(248,244,236,.14); color: var(--paper); font: 26px/1 -apple-system, system-ui, sans-serif;
+    transition: transform .15s;
+  }
+  .icon:active { transform: scale(.88); }
+  .icon.loved { color: #ff6b8b; }
+  .hearts { position: absolute; inset: 0; pointer-events: none; overflow: visible; }
+  .hearts span { position: absolute; bottom: 20%; font: 28px/1 -apple-system, sans-serif; color: #ff6b8b; animation: floatUp 1.8s ease-out forwards; }
+  @keyframes floatUp { 0% { transform: translateY(0) scale(.6); opacity: 0; } 15% { opacity: 1; } 100% { transform: translateY(-260px) scale(1.3) rotate(var(--r)); opacity: 0; } }
   .who { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; font-size: 40px; }
 </style>
 <script type="importmap">
@@ -141,6 +169,13 @@
     <div class="big">
       <div class="photo cloudy" id="photo"></div>
       <div class="caption"><span id="capMain"></span><span class="left" id="capLeft"></span></div>
+      <input class="capInput" id="capInput" maxlength="34" placeholder="write something…" hidden>
+      <div class="hearts" id="hearts"></div>
+    </div>
+    <div class="filters" id="filters" hidden></div>
+    <div class="actions" id="actions" hidden>
+      <button class="icon" id="heartBtn" aria-label="Love it">♡</button>
+      <button class="icon" id="saveBtn" aria-label="Save photo">⤓</button>
     </div>
     <div class="buttons">
       <label class="btn" id="pick"><span id="pickText">send a photo</span><input type="file" id="file" accept="image/*"></label>
@@ -244,7 +279,10 @@ async function refresh() {
   if (received) URL.revokeObjectURL(received.url);
   const url = URL.createObjectURL(blob);
   const img = await loadImage(url);
-  received = { sha: file.sha, url, img, date, fresh: true };
+  const note = await getJSON(`note-to-${ME}.json`);
+  const caption = note && note.data.sha === file.sha ? note.data.caption : "";
+  const heart = await getJSON(`heart-to-${THEM}.json`);
+  received = { sha: file.sha, url, img, blob, date, fresh: true, caption, loved: !!(heart && heart.data.sha === file.sha) };
   return true;
 }
 
@@ -256,7 +294,28 @@ function expire(sha) {
   }).catch(() => {});
 }
 
-async function sendPhoto(blob) {
+async function getJSON(path) {
+  const res = await gh(`contents/${path}?ref=${BRANCH}`).catch(() => null);
+  if (!res || !res.ok) return null;
+  const f = await res.json();
+  try { return { sha: f.sha, data: JSON.parse(decodeURIComponent(escape(atob(f.content.replace(/\n/g, ""))))) }; } catch { return null; }
+}
+async function putJSON(path, data, message) {
+  const cur = await gh(`contents/${path}?ref=${BRANCH}`).catch(() => null);
+  const sha = cur && cur.ok ? (await cur.json()).sha : undefined;
+  return gh(`contents/${path}`, { method: "PUT", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message, content: btoa(unescape(encodeURIComponent(JSON.stringify(data)))), sha, branch: BRANCH }) });
+}
+let lastSent = (() => { try { return JSON.parse(localStorage.getItem("last_sent") || "null"); } catch { return null; } })();
+let theyLoved = false;
+async function checkHeart() {   // did they love the last photo I sent?
+  if (!lastSent) return false;
+  const h = await getJSON(`heart-to-${ME}.json`);
+  const was = theyLoved; theyLoved = !!(h && h.data.sha === lastSent.sha);
+  return theyLoved && !was;
+}
+
+async function sendPhoto(blob, caption) {
   const path = `to-${THEM}.jpg`;
   const cur = await gh(`contents/${path}?ref=${BRANCH}`);
   if (cur.status === 401) { forgetToken(); throw new Error("GitHub didn't accept the token"); }
@@ -269,6 +328,10 @@ async function sendPhoto(blob) {
     body: JSON.stringify({ message: `photo for ${THEM}`, content, sha, branch: BRANCH }),
   });
   if (!res.ok) throw new Error(`${res.status} ${(await res.json().catch(() => ({}))).message || ""}`);
+  const newSha = (await res.json()).content.sha;
+  await putJSON(`note-to-${THEM}.json`, { sha: newSha, caption: caption || "" }, `note for ${THEM}`).catch(() => {});
+  lastSent = { sha: newSha, at: Date.now() }; theyLoved = false;
+  try { localStorage.setItem("last_sent", JSON.stringify(lastSent)); } catch {}
 }
 
 const loadImage = src => new Promise((ok, fail) => { const i = new Image(); i.onload = () => ok(i); i.onerror = fail; i.src = src; });
@@ -1681,7 +1744,7 @@ function paintPolaroid() {
     g.fillStyle = gr; g.fillRect(px, py, ps, ps);
   }
   g.strokeStyle = "rgba(0,0,0,.18)"; g.lineWidth = 2; g.strokeRect(px, py, ps, ps);
-  if (received) { g.fillStyle = "#2b2420"; g.font = "54px 'Great Vibes'"; g.textAlign = "center"; g.fillText(`for ${ME}`, w / 2, h - 45); }
+  if (received) { g.fillStyle = "#2b2420"; g.font = "54px 'Great Vibes'"; g.textAlign = "center"; const t = received.caption || `for ${ME}`; g.font = `${t.length > 18 ? 40 : 54}px 'Great Vibes'`; g.fillText(t, w / 2, h - 45); }
   polaroidTex.needsUpdate = true;
 }
 
@@ -1832,7 +1895,71 @@ function closePolaroid() {
 /* =========================================================
    Overlay (the big polaroid)
    ========================================================= */
-let pending = null;  // { blob, url } — resized photo waiting to be sent
+let pending = null;  // { blob, url, src, filter } — photo waiting to be sent
+
+const FILTERS = {
+  original: null,
+  warm:   (r, g, b) => [r * 1.08 + 12, g * 1.02 + 6, b * 0.88],
+  faded:  (r, g, b) => [r * 0.82 + 38, g * 0.82 + 34, b * 0.82 + 40],
+  "b&w":  (r, g, b) => { const l = (r * 0.3 + g * 0.59 + b * 0.11 - 128) * 1.12 + 128; return [l, l, l]; },
+  dreamy: (r, g, b) => [r * 0.9 + 40, g * 0.85 + 30, b * 0.9 + 42],
+  film:   (r, g, b) => [r * 1.05 + 4, g * 0.98 + 8, b * 0.9 + 18],
+};
+function applyFilter(src, name, maxSide = 1200) {
+  const scale = Math.min(1, maxSide / Math.max(src.width, src.height));
+  const c = document.createElement("canvas");
+  c.width = Math.round(src.width * scale); c.height = Math.round(src.height * scale);
+  const g = c.getContext("2d");
+  g.drawImage(src, 0, 0, c.width, c.height);
+  const f = FILTERS[name];
+  if (f) {
+    const im = g.getImageData(0, 0, c.width, c.height), d = im.data, W = c.width, H = c.height;
+    for (let i = 0, p = 0; i < d.length; i += 4, p++) {
+      const [r, gg, b] = f(d[i], d[i + 1], d[i + 2]);
+      let k = 1;
+      if (name === "film" || name === "dreamy") {             // soft vignette
+        const x = (p % W) / W - 0.5, y = Math.floor(p / W) / H - 0.5;
+        k = 1 - (x * x + y * y) * (name === "film" ? 0.9 : 0.5);
+      }
+      const n = name === "film" ? (Math.random() - 0.5) * 18 : 0;   // grain
+      d[i] = r * k + n; d[i + 1] = gg * k + n; d[i + 2] = b * k + n;
+    }
+    g.putImageData(im, 0, 0);
+    if (name === "dreamy") {                                   // light leak in the corner
+      const lg = g.createRadialGradient(W * 0.9, H * 0.1, 0, W * 0.9, H * 0.1, W * 0.7);
+      lg.addColorStop(0, "rgba(255,170,120,.45)"); lg.addColorStop(1, "rgba(255,170,120,0)");
+      g.globalCompositeOperation = "screen"; g.fillStyle = lg; g.fillRect(0, 0, W, H); g.globalCompositeOperation = "source-over";
+    }
+  }
+  return c;
+}
+function buildFilterStrip(src) {
+  const strip = $("filters"); strip.innerHTML = "";
+  for (const name of Object.keys(FILTERS)) {
+    const b = document.createElement("button"); if (name === pending.filter) b.className = "on";
+    const thumb = applyFilter(src, name, 120), cv = document.createElement("canvas"); cv.width = cv.height = 108;
+    const s = Math.min(thumb.width, thumb.height);
+    cv.getContext("2d").drawImage(thumb, (thumb.width - s) / 2, (thumb.height - s) / 2, s, s, 0, 0, 108, 108);
+    b.append(cv, name);
+    b.onclick = async () => {
+      pending.filter = name; [...strip.children].forEach(x => x.classList.toggle("on", x === b));
+      const out = applyFilter(pending.src, name);
+      const blob = await new Promise(r => out.toBlob(r, "image/jpeg", 0.86));
+      URL.revokeObjectURL(pending.url); pending.blob = blob; pending.url = URL.createObjectURL(blob);
+      renderOverlay(false);
+    };
+    strip.append(b);
+  }
+}
+function burstHearts(n = 9) {
+  const box = $("hearts");
+  for (let i = 0; i < n; i++) {
+    const h = document.createElement("span"); h.textContent = "♥";
+    h.style.left = `${15 + Math.random() * 70}%`; h.style.setProperty("--r", `${(Math.random() - 0.5) * 60}deg`);
+    h.style.animationDelay = `${i * 0.08}s`; h.style.fontSize = `${20 + Math.random() * 18}px`;
+    box.append(h); setTimeout(() => h.remove(), 2400);
+  }
+}
 
 function ago(ms) {
   const m = Math.round(ms / 60000);
@@ -1849,18 +1976,23 @@ function renderOverlay(animate) {
   const photo = $("photo");
   photo.classList.remove("developing");
   photo.innerHTML = "";
+  $("capInput").hidden = !pending; $("filters").hidden = !pending;
+  $("actions").hidden = !!pending || !received;
+  $("capMain").style.fontSize = ""; 
   if (pending) {
     photo.classList.remove("cloudy");
     photo.style.backgroundImage = `url("${pending.url}")`;
-    $("capMain").textContent = `for ${THEM}`;
-    $("capLeft").textContent = "preview";
+    $("capMain").textContent = ""; $("capLeft").textContent = "";
   } else if (received) {
     photo.classList.remove("cloudy");
     photo.style.backgroundImage = `url("${received.url}")`;
     if (animate && received.fresh) { void photo.offsetWidth; photo.classList.add("developing"); received.fresh = false; }
-    $("capMain").textContent = `from ${THEM} · ${ago(Date.now() - received.date)}`;
-    $("capLeft").textContent = left(received.date + LIFETIME - Date.now());
+    document.querySelector(".caption").style.justifyContent = received.caption ? "center" : "";
+    if (received.caption) { $("capMain").textContent = received.caption; $("capLeft").textContent = ""; }
+    else { $("capMain").textContent = `from ${THEM} · ${ago(Date.now() - received.date)}`; $("capLeft").textContent = left(received.date + LIFETIME - Date.now()); }
+    $("heartBtn").classList.toggle("loved", received.loved); $("heartBtn").textContent = received.loved ? "♥" : "♡";
     $("pickText").textContent = "send one back";
+    if (theyLoved && !$("status").textContent) $("status").textContent = `${THEM} loved your last photo ♥`;
   } else {
     photo.classList.add("cloudy");
     photo.style.backgroundImage = "";
@@ -1868,8 +2000,22 @@ function renderOverlay(animate) {
     $("capMain").textContent = "";
     $("capLeft").textContent = "";
     $("pickText").textContent = "send a photo";
+    if (theyLoved && !$("status").textContent) $("status").textContent = `${THEM} loved your last photo ♥`;
   }
 }
+
+$("heartBtn").onclick = async () => {
+  if (!received || received.loved) return;
+  received.loved = true; renderOverlay(false); burstHearts();
+  if (navigator.vibrate) navigator.vibrate([12, 40, 12]);
+  await putJSON(`heart-to-${THEM}.json`, { sha: received.sha, at: Date.now() }, `heart for ${THEM}`).catch(() => {});
+};
+$("saveBtn").onclick = async () => {
+  if (!received) return;
+  const file = new File([received.blob], "polaroid.jpg", { type: "image/jpeg" });
+  try { if (navigator.canShare && navigator.canShare({ files: [file] })) return await navigator.share({ files: [file] }); } catch (e) { if (e.name === "AbortError") return; }
+  const a = document.createElement("a"); a.href = received.url; a.download = "polaroid.jpg"; a.click();
+};
 
 $("photo").onclick = async () => {
   if (!tokenBad || pending) return;
@@ -1880,13 +2026,13 @@ $("file").onchange = async e => {
   const file = e.target.files[0];
   if (!file) return;
   const bmp = await createImageBitmap(file);
-  const scale = Math.min(1, 1200 / Math.max(bmp.width, bmp.height));
-  const c = document.createElement("canvas");
-  c.width = Math.round(bmp.width * scale); c.height = Math.round(bmp.height * scale);
-  c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height);
-  const blob = await new Promise(r => c.toBlob(r, "image/jpeg", 0.85));
+  const src = applyFilter(bmp, "original", 1600);
+  const out = applyFilter(src, "film");
+  const blob = await new Promise(r => out.toBlob(r, "image/jpeg", 0.86));
   if (pending) URL.revokeObjectURL(pending.url);
-  pending = { blob, url: URL.createObjectURL(blob) };
+  pending = { blob, url: URL.createObjectURL(blob), src, filter: "film" };
+  $("capInput").value = "";
+  buildFilterStrip(src);
   setMode(true);
   renderOverlay(false);
   $("status").textContent = "";
@@ -1899,7 +2045,7 @@ $("send").onclick = async () => {
   $("send").disabled = $("cancel").disabled = true;
   $("status").textContent = "sending…";
   try {
-    await sendPhoto(pending.blob);
+    await sendPhoto(pending.blob, $("capInput").value.trim());
     $("status").textContent = `sent to ${THEM} ♡`;
     setTimeout(() => {
       URL.revokeObjectURL(pending.url); pending = null; setMode(false); renderOverlay(false);
@@ -2157,7 +2303,7 @@ function frame(now) {
   }
   resize();
 
-  await refresh();
+  await Promise.all([refresh(), checkHeart()]);
   if (renderer) { paintPolaroid(); requestAnimationFrame(frame); $("climb").hidden = false; }
   // A photo is waiting → start with it already open.
   if (received || !renderer) openPolaroid(true);
@@ -2165,7 +2311,8 @@ function frame(now) {
 
   const update = async () => {
     if (pending) return;
-    const changed = await refresh();
+    const [changed, newHeart] = await Promise.all([refresh(), checkHeart()]);
+    if (newHeart) { $("status").textContent = ""; if (view === "open") { renderOverlay(false); burstHearts(); } }
     if (!changed) { if (view === "open") renderOverlay(false); return; }
     paintPolaroid();
     if (view === "open") renderOverlay(true);
