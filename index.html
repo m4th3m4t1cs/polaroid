@@ -211,11 +211,11 @@ const $ = id => document.getElementById(id);
 const ME = new URLSearchParams(location.search).get("me");
 if (!PEOPLE.includes(ME)) {
   document.body.innerHTML = `<div class="who"><div class="logo">polaroid</div>who are you?<div class="send" style="width:260px">${
-    PEOPLE.map(p => `<button class="bigbtn" onclick="location.search='?me=${p}'">${p}</button>`).join("")}</div></div>`;
+    PEOPLE.map(p => `<button class="bigbtn" onclick="location.search='?me=${p}'">${({ me: "L", friend: "R" })[p]}</button>`).join("")}</div></div>`;
   throw new Error("pick who you are");
 }
 const THEM = PEOPLE.find(p => p !== ME);
-const NAMES = { me: "your bestie", friend: "your bestie" };   // what each of you is called on the other's screen
+const NAMES = { me: "L", friend: "R" };   // what each of you is called on the other's screen
 const THEM_NAME = NAMES[THEM];
 
 /* =========================================================
@@ -551,7 +551,7 @@ $("sendBtn").onclick = async () => {
 $("forName").textContent = THEM_NAME;
 if (ME === PEOPLE[0]) {
   $("invite").hidden = false;
-  $("invite").textContent = `send your bestie her link`;
+  $("invite").textContent = `send R her link`;
   $("invite").onclick = async () => {
     const url = `${location.origin}${location.pathname}?me=${THEM}&t=${encodeURIComponent(token())}`;
     try { await navigator.share({ url }); }
