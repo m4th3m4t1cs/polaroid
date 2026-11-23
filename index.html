@@ -6,114 +6,127 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Polaroid">
-<meta name="theme-color" content="#1b1411">
+<meta name="theme-color" content="#120d0a">
 <link rel="apple-touch-icon" href="icon.png">
 <title>Polaroid</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap" rel="stylesheet">
 <style>
   :root {
-    --night: #1b1411;
-    --paper: #f8f4ec;
-    --ink: #3a302a;
-    --muted: #8f857b;
-    --warm: #ffcf8a;
+    --night: #120d0a;
+    --paper: #f3efe6;
+    --ink: #2b2420;
+    --muted: #8a8076;
+    --warm: #ffd49a;
+    --script: "Great Vibes", cursive;
   }
   * { box-sizing: border-box; margin: 0; -webkit-tap-highlight-color: transparent; }
   html, body { height: 100%; overflow: hidden; background: var(--night); }
-  body { font-family: "Caveat", cursive; color: var(--paper); touch-action: manipulation; }
-  #scene { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+  body { font-family: var(--script); color: var(--paper); -webkit-user-select: none; user-select: none; }
+  #scene { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
 
   .taphint {
-    position: fixed; left: 0; right: 0; bottom: calc(28px + env(safe-area-inset-bottom));
-    text-align: center; font-size: 22px; color: var(--warm); opacity: .85; pointer-events: none;
-    text-shadow: 0 0 12px rgba(255,190,110,.6); transition: opacity .4s;
+    position: fixed; left: 0; right: 0; bottom: calc(26px + env(safe-area-inset-bottom));
+    text-align: center; font-size: 26px; color: var(--warm); pointer-events: none;
+    text-shadow: 0 0 14px rgba(255,180,90,.55); transition: opacity .5s;
   }
   .taphint.gone { opacity: 0; }
 
-  /* The polaroid, opened big */
+  /* ---------- The polaroid, opened big ---------- */
   .overlay {
     position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 18px; padding: 24px 16px calc(24px + env(safe-area-inset-bottom));
-    background: radial-gradient(ellipse at center, rgba(20,12,8,.35), rgba(20,12,8,.8));
-    -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
-    opacity: 0; pointer-events: none; transition: opacity .45s ease;
+    gap: 22px; padding: 24px 16px calc(24px + env(safe-area-inset-bottom));
+    background: radial-gradient(ellipse at 50% 45%, rgba(10,6,4,.35), rgba(10,6,4,.85));
+    -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
+    opacity: 0; pointer-events: none; transition: opacity .5s ease;
   }
   .overlay.open { opacity: 1; pointer-events: auto; }
+  /* Real Polaroid proportions: 88 × 107 mm card, 79 mm square image */
   .big {
-    width: min(84vw, 400px, 52dvh); background: var(--paper); padding: 16px 16px 0;
-    box-shadow: 0 18px 40px rgba(0,0,0,.55), 0 2px 0 rgba(0,0,0,.08);
-    transform: scale(.55) rotate(-4deg); transition: transform .55s cubic-bezier(.2,.8,.2,1.05);
-    position: relative;
+    width: min(80vw, 380px, 50dvh); aspect-ratio: 88 / 107; position: relative;
+    padding: 5.7% 5.7% 0; border-radius: 1.5px;
+    background-color: var(--paper);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.35 0 0 0 0 0.3 0 0 0 0 0.25 0 0 0 .09 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E"),
+      linear-gradient(170deg, #f7f4ec, #ece6da);
+    box-shadow: 0 1px 1px rgba(0,0,0,.25), 0 6px 12px rgba(0,0,0,.3), 0 24px 48px rgba(0,0,0,.45);
+    transform: translateY(30px) scale(.6) rotate(-5deg); transition: transform .6s cubic-bezier(.2,.8,.25,1);
   }
-  .overlay.open .big { transform: scale(1) rotate(-1.2deg); }
+  .overlay.open .big { transform: rotate(-1.4deg); }
   .photo {
-    aspect-ratio: 1; background: #2e2b26 center/cover no-repeat; position: relative; overflow: hidden;
+    width: 100%; aspect-ratio: 1; position: relative; overflow: hidden;
+    background: #1e1c19 center/cover no-repeat;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,.12), inset 0 1px 5px rgba(0,0,0,.35);
   }
-  /* Empty / undeveloped film look */
+  .photo::after { /* glossy film surface */
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(125deg, rgba(255,255,255,.16) 0%, rgba(255,255,255,0) 35%, rgba(255,255,255,0) 70%, rgba(255,255,255,.06) 100%);
+  }
+  /* Undeveloped film: milky grey-green haze */
   .photo.cloudy {
     background-image:
-      radial-gradient(circle at 30% 35%, rgba(255,255,255,.22), transparent 45%),
-      radial-gradient(circle at 70% 65%, rgba(255,255,255,.16), transparent 50%),
-      radial-gradient(circle at 55% 20%, rgba(220,210,190,.18), transparent 40%),
-      linear-gradient(160deg, #7d8580, #a3a89e 55%, #858b84);
+      radial-gradient(ellipse at 28% 32%, rgba(255,255,250,.28), transparent 50%),
+      radial-gradient(ellipse at 72% 70%, rgba(240,245,235,.2), transparent 55%),
+      radial-gradient(ellipse at 60% 18%, rgba(255,255,255,.15), transparent 40%),
+      linear-gradient(155deg, #6f7771, #9ba196 55%, #7b827b);
   }
-  .photo.developing { animation: develop 2.8s ease-out both; }
+  .photo.developing { animation: develop 3.2s ease-out both; }
   @keyframes develop {
-    0%   { filter: blur(14px) brightness(1.6) saturate(.2) sepia(.4); }
-    60%  { filter: blur(3px) brightness(1.15) saturate(.7) sepia(.15); }
+    0%   { filter: blur(16px) brightness(1.7) saturate(.1) sepia(.35) contrast(.6); }
+    55%  { filter: blur(4px) brightness(1.2) saturate(.6) sepia(.15) contrast(.85); }
     100% { filter: none; }
   }
   .photo .empty {
     position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-    font-size: 26px; color: rgba(255,255,255,.55); text-align: center; padding: 16px;
+    font-size: 30px; color: rgba(255,255,255,.6); text-align: center; padding: 16px;
   }
   .caption {
-    height: 64px; display: flex; align-items: center; justify-content: space-between; gap: 8px;
-    color: var(--ink); font-size: 24px; padding: 0 4px; white-space: nowrap;
+    position: absolute; left: 5.7%; right: 5.7%; bottom: 0; height: 21%;
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    color: var(--ink); white-space: nowrap;
   }
-  .caption .left { font-size: 17px; color: var(--muted); }
+  #capMain { font-size: clamp(22px, 7vw, 32px); }
+  .caption .left { font-size: clamp(16px, 4.6vw, 21px); color: var(--muted); }
   .close {
-    position: absolute; top: calc(14px + env(safe-area-inset-top)); right: 16px;
-    background: rgba(248,244,236,.12); color: var(--paper); border: 0; border-radius: 50%;
-    width: 40px; height: 40px; font-size: 20px; cursor: pointer;
+    position: absolute; top: calc(10px + env(safe-area-inset-top)); right: 10px;
+    background: none; color: var(--paper); border: 0; width: 44px; height: 44px;
+    font: 300 26px -apple-system, system-ui, sans-serif; opacity: .8; cursor: pointer;
   }
-  .buttons { display: flex; gap: 12px; min-height: 48px; }
+  .close[hidden] { display: none; }
+  .buttons { display: flex; gap: 14px; min-height: 50px; align-items: center; }
   .btn {
-    font: 700 24px "Caveat", cursive; padding: 6px 24px 8px; border-radius: 999px; border: 0; cursor: pointer;
-    background: var(--paper); color: var(--ink); box-shadow: 0 6px 16px rgba(0,0,0,.35);
+    font: 32px/1 var(--script); padding: 6px 26px 10px; border-radius: 2px; border: 0; cursor: pointer;
+    background: var(--paper); color: var(--ink);
+    box-shadow: 0 1px 1px rgba(0,0,0,.3), 0 8px 18px rgba(0,0,0,.4);
   }
-  .btn.primary { background: #e8735a; color: #fff; }
+  .btn.primary { background: #8e2f25; color: #f7eee2; }
   .btn:disabled { opacity: .5; }
   .btn[hidden] { display: none; }
   input[type=file] { display: none; }
-  .status { font-size: 20px; min-height: 1.2em; color: var(--warm); text-align: center; }
-  .invite {
-    background: none; border: 0; font: 18px "Caveat", cursive; color: var(--muted);
-    text-decoration: underline; cursor: pointer; padding: 4px;
-  }
+  .status { font-size: 26px; min-height: 1.2em; color: var(--warm); text-align: center; }
+  .invite { background: none; border: 0; font: 24px var(--script); color: var(--muted); cursor: pointer; padding: 4px; }
+  .invite[hidden] { display: none; }
 
   .hint {
     position: fixed; left: 12px; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom)); z-index: 5;
-    background: var(--paper); color: var(--ink); border-radius: 14px; padding: 12px 44px 12px 16px;
+    background: var(--paper); color: var(--ink); border-radius: 3px; padding: 12px 44px 12px 16px;
     font: 15px/1.4 -apple-system, system-ui, sans-serif; box-shadow: 0 8px 24px rgba(0,0,0,.4);
   }
   .hint b { white-space: nowrap; }
   .hint button { position: absolute; top: 6px; right: 6px; background: none; border: 0; padding: 6px 10px; font-size: 18px; color: var(--muted); }
 
-  .who { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; font-size: 30px; }
+  .who { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; font-size: 40px; }
 </style>
 <script type="importmap">
 { "imports": {
-    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
 } }
 </script>
 </head>
 <body>
   <canvas id="scene"></canvas>
-  <div class="taphint gone" id="taphint">tap the polaroid</div>
+  <div class="taphint gone" id="taphint">tap the polaroid · drag the lights</div>
 
   <div class="overlay" id="overlay">
     <button class="close" id="close" aria-label="Close">✕</button>
@@ -138,6 +151,14 @@
 <script type="module">
 import * as THREE from "three";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
+import { ImprovedNoise } from "three/addons/math/ImprovedNoise.js";
+import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
+import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
+import { BokehPass } from "three/addons/postprocessing/BokehPass.js";
+import { ShaderPass } from "three/addons/postprocessing/ShaderPass.js";
+import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 
 /* =========================================================
    Settings
@@ -242,263 +263,462 @@ async function sendPhoto(blob) {
 const loadImage = src => new Promise((ok, fail) => { const i = new Image(); i.onload = () => ok(i); i.onerror = fail; i.src = src; });
 
 /* =========================================================
-   3D bunk bed
+   Renderer
    ========================================================= */
 const canvas = $("scene");
 let renderer = null;
-try { renderer = new THREE.WebGLRenderer({ canvas, antialias: true }); } catch {}
+try { renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: "high-performance" }); } catch {}
 
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(50, 1, 0.05, 30);
-let hitMesh, polaroidTex, polaroidGroup, photoGlow;
-const bulbs = [];
-const twinkleLights = [];
+const camera = new THREE.PerspectiveCamera(55, 1, 0.03, 20);
+const noise = new ImprovedNoise();
+const fbm = (x, y, z = 0.37, oct = 4) => { let a = 0, f = 1, s = 0.5; for (let i = 0; i < oct; i++) { a += s * noise.noise(x * f, y * f, z * f); f *= 2.03; s *= 0.5; } return a; };
 
-// Seeded randomness so the mess looks the same every visit.
-let seed = 11;
-const rand = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
-
-function canvasTex(w, h, draw, repeat) {
-  const c = document.createElement("canvas"); c.width = w; c.height = h;
-  draw(c.getContext("2d"), w, h);
-  const t = new THREE.CanvasTexture(c);
-  t.colorSpace = THREE.SRGBColorSpace;
-  if (repeat) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(...repeat); }
-  t.anisotropy = 4;
-  return t;
+/* ---------- Textures (CC0, Poly Haven) ---------- */
+const loader = new THREE.TextureLoader();
+const maxAniso = renderer ? renderer.capabilities.getMaxAnisotropy() : 1;
+const texCache = {};
+function tex(name, kind, repeat = [1, 1], rotation = 0) {
+  const key = `${name}_${kind}_${repeat}_${rotation}`;
+  if (texCache[key]) return texCache[key];
+  const t = loader.load(`tex/${name}_${kind}.jpg`);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(...repeat); t.rotation = rotation; t.anisotropy = maxAniso;
+  if (kind === "diff") t.colorSpace = THREE.SRGBColorSpace;
+  return (texCache[key] = t);
 }
-const woodTex = (base, dark, rep) => canvasTex(256, 256, (g, w, h) => {
-  g.fillStyle = base; g.fillRect(0, 0, w, h);
-  for (let i = 0; i < 70; i++) {
-    g.strokeStyle = dark; g.globalAlpha = 0.08 + rand() * 0.18; g.lineWidth = 0.5 + rand() * 2.5;
-    const y = rand() * h; g.beginPath(); g.moveTo(0, y);
-    for (let x = 0; x <= w; x += 16) g.lineTo(x, y + Math.sin(x * 0.03 + i) * 3);
-    g.stroke();
-  }
-  g.globalAlpha = 1;
-}, rep);
-const knitTex = (base, rep = [4, 4]) => canvasTex(128, 128, (g, w, h) => {
-  g.fillStyle = base; g.fillRect(0, 0, w, h);
-  for (let y = 0; y < h; y += 8) for (let x = 0; x < w; x += 8) {
-    g.fillStyle = `rgba(0,0,0,${0.04 + rand() * 0.05})`; g.beginPath(); g.ellipse(x + 4, y + 4, 2.5, 3.6, 0, 0, Math.PI * 2); g.fill();
-  }
-}, rep);
+function pbr(name, { repeat = [1, 1], color = 0xffffff, normal = 1, roughness = 1, rotation = 0, side } = {}) {
+  return new THREE.MeshStandardMaterial({
+    map: tex(name, "diff", repeat, rotation), normalMap: tex(name, "nor_gl", repeat, rotation),
+    roughnessMap: tex(name, "rough", repeat, rotation), normalScale: new THREE.Vector2(normal, normal),
+    color, roughness, metalness: 0, side,
+  });
+}
 
-const mat = (o) => new THREE.MeshStandardMaterial({ roughness: 0.85, metalness: 0, ...o });
-function add(geo, material, x, y, z, rx = 0, ry = 0, rz = 0, parent = scene) {
+// Box with world-scaled UVs, grain running along the long side.
+function woodBox(w, h, d, texSize = 0.7) {
+  const g = new THREE.BoxGeometry(w, h, d);
+  const uv = g.attributes.uv;
+  const faces = [[d, h], [d, h], [w, d], [w, d], [w, h], [w, h]];
+  for (let f = 0; f < 6; f++) {
+    const [du, dv] = faces[f], swap = dv > du;
+    for (let k = 0; k < 4; k++) {
+      const i = f * 4 + k; let u = uv.getX(i) * du / texSize, v = uv.getY(i) * dv / texSize;
+      if (swap) [u, v] = [v, u];
+      uv.setXY(i, u + f * 0.37, v + f * 0.61);
+    }
+  }
+  return g;
+}
+
+function add(geo, material, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0, parent = scene) {
   const m = new THREE.Mesh(geo, material);
   m.position.set(x, y, z); m.rotation.set(rx, ry, rz);
   m.castShadow = m.receiveShadow = true;
   parent.add(m); return m;
 }
-const box = (w, h, d) => new THREE.BoxGeometry(w, h, d);
-const rbox = (w, h, d, r, s = 4) => new RoundedBoxGeometry(w, h, d, s, r);
 
-// Bed dimensions (meters). Bed runs along x, against the wall at the back (−z).
-const BACK = -0.46, FRONT = 0.5, LEFT = -1.0, RIGHT = 1.0;
-const LOW = 0.32, HIGH = 1.32;            // frame heights
-const MATTRESS_TOP = LOW + 0.2;
-const MIDZ = (FRONT + BACK) / 2;
+/* =========================================================
+   The top bunk
+   ========================================================= */
+const BACK = -0.47, FRONT = 0.5, LEFT = -1.0, RIGHT = 1.0;
+const Y0 = 1.55;                      // top of the top-bunk mattress
+const CEIL = 2.45;
+const WALL_Z = BACK - 0.03;
 
-function buildScene() {
-  scene.background = new THREE.Color(0x1b1411);
-  scene.fog = new THREE.Fog(0x1b1411, 3.2, 7.5);
-
-  const wallTex = canvasTex(256, 256, (g, w, h) => {
-    g.fillStyle = "#5b4538"; g.fillRect(0, 0, w, h);
-    for (let i = 0; i < 4000; i++) { g.fillStyle = `rgba(${rand() < .5 ? "0,0,0" : "255,240,220"},${rand() * .05})`; g.fillRect(rand() * w, rand() * h, 2, 2); }
-  }, [4, 2]);
-  const plaidTex = canvasTex(256, 256, (g, w, h) => {
-    g.fillStyle = "#c98f86"; g.fillRect(0, 0, w, h);
-    const band = (c, a, horiz, pos, size) => { g.fillStyle = c; g.globalAlpha = a; horiz ? g.fillRect(0, pos, w, size) : g.fillRect(pos, 0, size, h); };
-    for (const horiz of [true, false]) {
-      band("#a8645f", .55, horiz, 30, 60); band("#f2dccd", .55, horiz, 120, 10);
-      band("#7e4a4d", .45, horiz, 170, 34); band("#f2dccd", .4, horiz, 230, 5);
-    }
-    g.globalAlpha = 1;
-    for (let i = 0; i < 3000; i++) { g.fillStyle = `rgba(255,255,255,${rand() * .06})`; g.fillRect(rand() * w, rand() * h, 1.5, 1.5); }
-  }, [3, 3]);
-
-  // Room
-  add(new THREE.PlaneGeometry(8, 6), mat({ map: woodTex("#5a3d2b", "#2a1a10", [3, 6]), roughness: 0.7 }), 0, 0, 1.5, -Math.PI / 2);
-  add(new THREE.PlaneGeometry(8, 4), mat({ map: wallTex }), 0, 2, BACK - 0.04);
-  add(new THREE.PlaneGeometry(6, 4), mat({ map: wallTex, color: 0xb59a88 }), LEFT - 0.6, 2, 1, 0, Math.PI / 2);
-  add(new THREE.CircleGeometry(0.7, 48), mat({ map: knitTex("#8f7a66") }), 0.5, 0.004, 1.35, -Math.PI / 2);
-
-  // Bed frame
-  const wood = mat({ map: woodTex("#b98a5e", "#5e3b22", [1, 1]), roughness: 0.6 });
-  for (const x of [LEFT, RIGHT]) for (const z of [BACK, FRONT]) add(box(0.07, 1.78, 0.07), wood, x, 0.89, z);
-  for (const y of [LOW, HIGH]) {
-    add(box(RIGHT - LEFT + 0.07, 0.14, 0.04), wood, 0, y, FRONT);
-    add(box(RIGHT - LEFT + 0.07, 0.14, 0.04), wood, 0, y, BACK);
-    for (const x of [LEFT, RIGHT]) add(box(0.04, 0.14, FRONT - BACK), wood, x, y, MIDZ);
-  }
-  for (const x of [LEFT, RIGHT]) for (const y of [0.62, 0.8]) add(box(0.035, 0.06, FRONT - BACK), wood, x, y, MIDZ);
-  // Top bunk: slats seen from below, then its mattress and rail
-  for (let i = 0; i < 11; i++) add(box(0.09, 0.02, FRONT - BACK - 0.04), wood, LEFT + 0.1 + i * 0.18, HIGH - 0.05, MIDZ);
-  add(rbox(1.96, 0.16, 0.92, 0.05, 3), mat({ color: 0xece4d6 }), 0, HIGH + 0.04, MIDZ);
-  add(box(1.3, 0.06, 0.035), wood, -0.3, HIGH + 0.3, FRONT);
-  for (const x of [-0.9, 0.3]) add(box(0.04, 0.3, 0.035), wood, x, HIGH + 0.15, FRONT);
-  // Ladder on the left
-  for (const x of [-0.94, -0.66]) add(box(0.045, 1.75, 0.045), wood, x, 0.875, FRONT + 0.06);
-  for (const y of [0.2, 0.55, 0.9, 1.25, 1.6]) add(box(0.3, 0.035, 0.05), wood, -0.8, y, FRONT + 0.06);
-
-  // Lower mattress + rumpled blanket
-  add(rbox(1.96, 0.2, 0.92, 0.06), mat({ color: 0xf1ebe0 }), 0, LOW + 0.1, MIDZ);
-  add(makeBlanket(), new THREE.MeshStandardMaterial({ map: plaidTex, roughness: 1, side: THREE.DoubleSide }), 0, 0, 0);
-
-  // Pillows
-  add(rbox(0.55, 0.13, 0.34, 0.06, 5), mat({ color: 0xf4ece0, map: knitTex("#ffffff") }), -0.68, MATTRESS_TOP + 0.07, -0.22, 0.25, 0.15, 0.06);
-  add(rbox(0.5, 0.12, 0.32, 0.06, 5), mat({ color: 0xd8b4a6, map: knitTex("#ffffff") }), -0.62, MATTRESS_TOP + 0.13, -0.05, -0.35, -0.3, -0.1);
-
-  // Little bear plushie
-  const fur = mat({ color: 0xa87a55, roughness: 1 });
-  const bear = new THREE.Group(); bear.position.set(-0.33, MATTRESS_TOP + 0.08, -0.3); bear.rotation.set(0, 0.6, 0.15); scene.add(bear);
-  add(new THREE.SphereGeometry(0.075, 24, 16), fur, 0, 0, 0, 0, 0, 0, bear);
-  add(new THREE.SphereGeometry(0.055, 24, 16), fur, 0, 0.11, 0.01, 0, 0, 0, bear);
-  for (const s of [-1, 1]) add(new THREE.SphereGeometry(0.022, 12, 8), fur, s * 0.042, 0.155, 0, 0, 0, 0, bear);
-  add(new THREE.SphereGeometry(0.02, 12, 8), mat({ color: 0xe8d2b8 }), 0, 0.1, 0.055, 0, 0, 0, bear);
-
-  // Mess: hoodie at the foot, a book, things on the floor
-  add(rbox(0.42, 0.08, 0.3, 0.04), mat({ color: 0x8a9a7b, map: knitTex("#ffffff") }), 0.78, MATTRESS_TOP + 0.08, -0.2, 0.1, 0.5, 0.12);
-  add(rbox(0.3, 0.06, 0.22, 0.03, 3), mat({ color: 0x8a9a7b }), 0.62, MATTRESS_TOP + 0.13, -0.1, -0.2, 1.1, 0.2);
-  add(box(0.17, 0.03, 0.23), mat({ color: 0x3f5a73 }), 0.48, MATTRESS_TOP + 0.06, 0.28, 0.04, 0.7, 0.03);
-  [0xb5523b, 0xe0c27a, 0x4f6b5a, 0x7b5aa0].forEach((c, i) =>
-    add(box(0.26 - i * 0.02, 0.045, 0.19), mat({ color: c }), 1.38, 0.024 + i * 0.046, 0.78, 0, 0.2 + i * 0.25, 0));
-  add(new THREE.CylinderGeometry(0.045, 0.04, 0.1, 24), mat({ color: 0xe9e0d2, roughness: 0.4 }), 1.62, 0.05, 1.0);
-  add(rbox(0.22, 0.03, 0.09, 0.015, 3), mat({ color: 0xf2f0ea, map: knitTex("#ffffff") }), 0.3, 0.016, 0.95, 0, 0.9, 0);
-
-  // Fairy lights: one under the top bunk at the front, one along the wall inside
-  fairyString([[LEFT, HIGH - 0.08, FRONT + 0.03], [-0.55, HIGH - 0.27, FRONT + 0.05], [-0.05, HIGH - 0.1, FRONT + 0.04],
-               [0.45, HIGH - 0.3, FRONT + 0.06], [RIGHT, HIGH - 0.08, FRONT + 0.03]], 26, 2);
-  fairyString([[LEFT + 0.05, HIGH - 0.12, BACK + 0.03], [-0.4, HIGH - 0.32, BACK + 0.03], [0.2, HIGH - 0.16, BACK + 0.03],
-               [0.7, HIGH - 0.36, BACK + 0.03], [RIGHT - 0.05, HIGH - 0.14, BACK + 0.03]], 22, 2);
-
-  // Lighting: dim warm room, the fairy lights do the rest
-  scene.add(new THREE.HemisphereLight(0xb9a7c9, 0x2a1a12, 0.32));
-  const lamp = new THREE.DirectionalLight(0x9db2d8, 0.55);
-  lamp.position.set(2.5, 3, 3); lamp.castShadow = true;
-  lamp.shadow.mapSize.set(1024, 1024);
-  Object.assign(lamp.shadow.camera, { left: -2, right: 2, top: 2, bottom: -1, near: 1, far: 10 });
-  lamp.shadow.bias = -0.0005; lamp.shadow.radius = 4;
-  scene.add(lamp);
-
-  buildPolaroid();
+// Height of the duvet surface at (x, z) — used by things lying on it.
+function duvetH(x, z) {
+  let h = Y0 + 0.075
+    + 0.03 * fbm(x * 2.2, z * 2.2)
+    + 0.01 * fbm(x * 5, z * 4.5, 3.1, 3)
+    + 0.03 * Math.max(0, Math.sin(x * 5.0 + 2.0 * fbm(x * 1.5, z * 1.5, 7.7) + z * 1.3)) ** 2   // long folds
+    + 0.007 * (1 - Math.abs(noise.noise(x * 6, z * 4.5, 4.4))) ** 3                                // soft creases
+    + 0.0025 * (1 - Math.abs(noise.noise(x * 13, z * 10, 8.8))) ** 3
+    + 0.07 * Math.exp(-((x - 0.78) ** 2 / 0.03 + (z - 0.05) ** 2 / 0.08));                    // bunched at the foot
+  // turned-down top edge, and thinner where it meets the wall
+  h -= 0.055 * THREE.MathUtils.smoothstep(0.02, -0.1, x);
+  h -= 0.03 * THREE.MathUtils.smoothstep(BACK + 0.1, BACK + 0.02, z);
+  return h;
 }
 
-function makeBlanket() {
-  const geo = new THREE.PlaneGeometry(1, 1, 60, 44);
-  const p = geo.attributes.position;
-  const x0 = -0.42, x1 = 1.3, z0 = BACK + 0.03, z1 = FRONT + 0.36;
-  const top = MATTRESS_TOP + 0.045, edgeZ = FRONT - 0.02, edgeX = RIGHT - 0.02;
+let polaroid = {};          // meshes + physics handles
+const strands = [];         // fairy light strands
+const twinkles = [];        // point lights that follow the wire
+
+function buildRoom() {
+  scene.background = new THREE.Color(0x0d0907);
+  scene.fog = new THREE.FogExp2(0x0d0907, 0.16);
+
+  // Plaster walls + ceiling (warm off-white paint)
+  add(new THREE.PlaneGeometry(6, 3.2), pbr("painted_plaster_wall", { repeat: [3, 2], color: 0xe9ddcc, normal: 0.6 }), 0, CEIL - 1.6, WALL_Z);
+  add(new THREE.PlaneGeometry(4, 3.2), pbr("painted_plaster_wall", { repeat: [2, 2], color: 0xe2d4c2, normal: 0.6 }), LEFT - 0.13, CEIL - 1.6, 1.3, 0, Math.PI / 2);
+  add(new THREE.PlaneGeometry(6, 4), pbr("painted_plaster_wall", { repeat: [3, 2], color: 0xd9ccba, normal: 0.4 }), 0, CEIL, 1.5, Math.PI / 2);
+
+  // Pine frame
+  const pine = pbr("coated_pine", { color: 0xfff1de, normal: 0.8, roughness: 0.75 });
+  for (const x of [LEFT, RIGHT]) for (const z of [BACK, FRONT]) add(woodBox(0.065, 1.2, 0.065), pine, x, Y0 - 0.45 + 0.6, z);
+  // bed rails around the mattress
+  add(woodBox(RIGHT - LEFT, 0.15, 0.035), pine, 0, Y0 - 0.1, FRONT + 0.012);
+  add(woodBox(RIGHT - LEFT, 0.15, 0.035), pine, 0, Y0 - 0.1, BACK - 0.012);
+  for (const x of [LEFT, RIGHT]) add(woodBox(0.035, 0.15, FRONT - BACK), pine, x, Y0 - 0.1, (FRONT + BACK) / 2);
+  // safety rail along the front (open where the ladder comes up) and head/foot boards
+  const railY = [Y0 + 0.14, Y0 + 0.33];
+  for (const y of railY) add(woodBox(1.42, 0.07, 0.028), pine, LEFT + 0.71, y, FRONT + 0.02);
+  add(woodBox(0.05, 0.4, 0.028), pine, LEFT + 1.42, Y0 + 0.16, FRONT + 0.02);
+  for (const x of [LEFT, RIGHT]) for (const y of railY) add(woodBox(0.028, 0.07, FRONT - BACK), pine, x, y, (FRONT + BACK) / 2);
+  // ladder top
+  for (const x of [0.5, 0.92]) add(woodBox(0.045, 0.9, 0.06), pine, x, Y0 - 0.25, FRONT + 0.07);
+  add(woodBox(0.42, 0.04, 0.07), pine, 0.71, Y0 - 0.22, FRONT + 0.07);
+
+  // Mattress with a fitted cotton sheet (only slightly softened edges)
+  const sheet = pbr("stretch_poplin", { repeat: [5, 3], color: 0xf1ece3, normal: 0.7 });
+  add(new RoundedBoxGeometry(RIGHT - LEFT - 0.04, 0.16, FRONT - BACK - 0.03, 2, 0.02), sheet, 0, Y0 - 0.08, (FRONT + BACK) / 2);
+
+  // Linen duvet (oat)
+  add(surface(-0.12, RIGHT - 0.03, BACK + 0.02, FRONT + 0.0, 150, 110, duvetH, (x, z, y) => {
+    if (z > FRONT - 0.04) y -= (z - (FRONT - 0.04)) * 3.5;   // drape against the front rail
+    if (x > RIGHT - 0.08) y -= (x - (RIGHT - 0.08)) * 2.5;   // and the foot
+    return y;
+  }), pbr("rough_linen", { repeat: [7, 5], color: 0xe6dccb, normal: 1.6, side: THREE.DoubleSide }));
+
+  // Pillows leaning on the wall
+  addPillow(-0.5, Y0 + 0.11, BACK + 0.2, 0.62, 0.42, 0.21, -0.55, 0.12, 0xe7e0d4);
+  addPillow(-0.2, Y0 + 0.09, BACK + 0.32, 0.56, 0.38, 0.18, -0.35, -0.32, 0xbfae96);
+
+  // Chunky knit throw, crumpled at the foot
+  add(surface(0.42, 1.0, -0.38, 0.38, 60, 50, (x, z) => duvetH(x, z) + 0.018 + 0.05 * Math.max(0, fbm(x * 4, z * 4, 9.1)) + 0.03 * fbm(x * 9, z * 9, 2.2, 2),
+    (x, z, y) => y - 0.08 * THREE.MathUtils.smoothstep(0.55, 0.42, x)),
+    pbr("knitted_fleece", { repeat: [2.5, 2.5], color: 0xa9b098, normal: 2.2, side: THREE.DoubleSide }));
+
+  // An open paperback lying on the duvet
+  const book = new THREE.Group();
+  book.position.set(0.4, duvetH(0.4, -0.02) + 0.004, -0.02); book.rotation.set(0.05, 0.35, -0.04);
+  scene.add(book);
+  const cover = new THREE.MeshStandardMaterial({ color: 0x3b4a3f, roughness: 0.7 });
+  const pages = new THREE.MeshStandardMaterial({ color: 0xf2ead8, roughness: 0.9 });
+  for (const s of [-1, 1]) {
+    add(new THREE.BoxGeometry(0.105, 0.002, 0.175), cover, s * 0.054, -0.008, 0, 0, 0, s * -0.09, book);
+    add(new THREE.BoxGeometry(0.1, 0.008, 0.168), pages, s * 0.052, -0.002, 0, 0, 0, s * -0.11, book);
+  }
+
+  // Lights: moonlight from a window off to the right, plus a little room bounce
+  const moon = new THREE.DirectionalLight(0x9fb4e0, 0.55);
+  moon.position.set(2.2, 3.2, 2.4); moon.target.position.set(0, Y0, 0);
+  moon.castShadow = true;
+  moon.shadow.mapSize.set(2048, 2048);
+  Object.assign(moon.shadow.camera, { left: -1.4, right: 1.4, top: 1.4, bottom: -1.0, near: 1, far: 8 });
+  moon.shadow.radius = 5; moon.shadow.blurSamples = 12; moon.shadow.bias = -0.0004;
+  scene.add(moon, moon.target);
+  scene.add(new THREE.HemisphereLight(0x8a7a90, 0x1a120c, 0.12));
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+  scene.environmentIntensity = 0.06;
+
+  buildLights();
+}
+
+// A grid surface whose height comes from f(x, z); post(x, z, y) can bend it further.
+function surface(x0, x1, z0, z1, nx, nz, f, post) {
+  const g = new THREE.PlaneGeometry(1, 1, nx, nz);
+  const p = g.attributes.position;
   for (let i = 0; i < p.count; i++) {
-    const u = p.getX(i) + 0.5, v = p.getY(i) + 0.5;
-    let x = x0 + u * (x1 - x0), z = z0 + (1 - v) * (z1 - z0);
-    let y = top
-      + 0.012 * Math.sin(x * 23 + z * 7) + 0.009 * Math.sin(z * 31 - x * 11) + 0.011 * Math.sin(x * 9 + z * 17 + 1.3)
-      + 0.08 * Math.exp(-((x - 0.66) ** 2 / 0.02 + (z + 0.12) ** 2 / 0.06))   // big rumple
-      + 0.05 * Math.exp(-((x + 0.2) ** 2 / 0.03 + (z - 0.28) ** 2 / 0.012))  // fold
-      + (u < 0.04 ? 0.015 : 0);                                              // turned-down edge
-    if (z > edgeZ) { const o = z - edgeZ; z = edgeZ + 0.07 + o * 0.05 + 0.012 * Math.sin(x * 26); y -= o * 1.02; }
-    if (x > edgeX) { const o = x - edgeX; x = edgeX + 0.06 + o * 0.05 + 0.01 * Math.sin(z * 30); y -= o * 1.02; }
-    p.setXYZ(i, x, Math.max(y, 0.12), z);
+    const x = x0 + (p.getX(i) + 0.5) * (x1 - x0), z = z0 + (0.5 - p.getY(i)) * (z1 - z0);
+    let y = f(x, z); if (post) y = post(x, z, y);
+    p.setXYZ(i, x, y, z);
   }
-  geo.computeVertexNormals();
-  return geo;
+  g.computeVertexNormals();
+  return g;
 }
 
-let glowTex;
-function fairyString(points, count, lights) {
-  glowTex = glowTex || canvasTex(64, 64, (g, w) => {
-    const gr = g.createRadialGradient(w / 2, w / 2, 0, w / 2, w / 2, w / 2);
-    gr.addColorStop(0, "rgba(255,230,180,1)"); gr.addColorStop(.25, "rgba(255,190,110,.55)"); gr.addColorStop(1, "rgba(255,160,80,0)");
-    g.fillStyle = gr; g.fillRect(0, 0, w, w);
-  });
-  const curve = new THREE.CatmullRomCurve3(points.map(p => new THREE.Vector3(...p)));
-  scene.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 120, 0.003, 5), new THREE.MeshBasicMaterial({ color: 0x2c3a24 })));
-  for (let i = 0; i < count; i++) {
-    const pos = curve.getPoint((i + 0.5) / count);
-    const color = new THREE.Color(rand() < 0.8 ? 0xffd38f : 0xffb37a);
-    const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.011, 10, 8), new THREE.MeshBasicMaterial({ color }));
-    bulb.position.copy(pos); bulb.position.y -= 0.012; scene.add(bulb);
-    const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
-    glow.position.copy(bulb.position); glow.scale.setScalar(0.14); scene.add(glow);
-    bulbs.push({ glow, phase: rand() * 10, speed: 0.6 + rand() * 1.6 });
+// Pillow: two puffed halves meeting at a sharp seam, with a few creases.
+function addPillow(x, y, z, w, d, t, tilt, yaw, color) {
+  const grp = new THREE.Group(); grp.position.set(x, y, z); grp.rotation.set(tilt, yaw, 0); scene.add(grp);
+  const m = pbr("stretch_poplin", { repeat: [2, 1.5], color, normal: 0.9, side: THREE.DoubleSide });
+  for (const s of [1, -1]) {
+    const g = new THREE.PlaneGeometry(w, d, 40, 30);
+    const p = g.attributes.position;
+    for (let i = 0; i < p.count; i++) {
+      const u = p.getX(i) / (w / 2), v = p.getY(i) / (d / 2);
+      const puff = Math.pow(Math.max(0, 1 - Math.abs(u) ** 2.6), 0.4) * Math.pow(Math.max(0, 1 - Math.abs(v) ** 2.6), 0.4);
+      const crease = 0.006 * fbm(u * 3 + s, v * 3) + 0.004 * Math.sin(u * 9 + v * 4);
+      const pinch = 1 - 0.06 * (Math.abs(u * v)) ** 2;          // corners pull in, like a stuffed pillow
+      p.setXYZ(i, p.getX(i) * pinch, p.getY(i) * pinch, s * (t / 2 * puff + crease * puff));
+    }
+    g.computeVertexNormals();
+    add(g, m, 0, 0, 0, 0, 0, 0, grp);
   }
-  for (let i = 0; i < lights; i++) {
-    const l = new THREE.PointLight(0xffb468, 0.9, 2.6, 1.6);
-    l.position.copy(curve.getPoint((i + 0.5) / lights)); l.position.y -= 0.05;
-    scene.add(l); twinkleLights.push({ l, base: 0.9, phase: rand() * 10 });
-  }
-}
-
-/* The polaroid lying propped on the blanket */
-const PW = 0.2, PH = 0.245;
-function buildPolaroid() {
-  polaroidGroup = new THREE.Group();
-  polaroidGroup.position.set(0.15, MATTRESS_TOP + 0.1, 0.13);
-  polaroidGroup.scale.setScalar(1.2);
-  polaroidGroup.rotation.set(-1.12, -0.22, 0.14, "YXZ");
-  scene.add(polaroidGroup);
-  add(box(PW, PH, 0.004), mat({ color: 0xf3efe6, roughness: 0.6 }), 0, 0, -0.002, 0, 0, 0, polaroidGroup);
-  polaroidTex = canvasTex(400, 490, () => {});
-  add(new THREE.PlaneGeometry(PW, PH), mat({ map: polaroidTex, roughness: 0.45 }), 0, 0, 0.0005, 0, 0, 0, polaroidGroup);
-  hitMesh = new THREE.Mesh(new THREE.PlaneGeometry(PW * 1.8, PH * 1.6), new THREE.MeshBasicMaterial({ visible: false }));
-  polaroidGroup.add(hitMesh);
-  photoGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: 0xffe2b0, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0 }));
-  photoGlow.scale.set(0.5, 0.5, 1); photoGlow.position.z = -0.01;
-  polaroidGroup.add(photoGlow);
-  paintPolaroid();
-}
-
-// The small polaroid is always "clouded": the photo shows through a milky, undeveloped haze.
-function paintPolaroid() {
-  if (!polaroidTex) return;
-  const c = polaroidTex.image, g = c.getContext("2d"), w = c.width, h = c.height;
-  g.fillStyle = "#f6f2e9"; g.fillRect(0, 0, w, h);
-  const px = 26, py = 26, ps = w - 52;
-  if (received) {
-    const tiny = document.createElement("canvas"); tiny.width = tiny.height = 18;
-    const img = received.img, s = Math.min(img.width, img.height);
-    tiny.getContext("2d").drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, 18, 18);
-    g.imageSmoothingEnabled = true; g.imageSmoothingQuality = "high";
-    g.drawImage(tiny, px, py, ps, ps);
-    g.fillStyle = "rgba(238,230,214,.5)"; g.fillRect(px, py, ps, ps);
-  } else {
-    const gr = g.createLinearGradient(px, py, px + ps, py + ps);
-    gr.addColorStop(0, "#7d8580"); gr.addColorStop(.55, "#a3a89e"); gr.addColorStop(1, "#858b84");
-    g.fillStyle = gr; g.fillRect(px, py, ps, ps);
-  }
-  seed = 99;
-  for (let i = 0; i < 9; i++) {
-    const cx = px + rand() * ps, cy = py + rand() * ps, r = ps * (0.2 + rand() * 0.35);
-    const gr = g.createRadialGradient(cx, cy, 0, cx, cy, r);
-    gr.addColorStop(0, `rgba(255,252,245,${received ? .28 : .18})`); gr.addColorStop(1, "rgba(255,252,245,0)");
-    g.fillStyle = gr; g.fillRect(px, py, ps, ps);
-  }
-  if (received) { g.fillStyle = "#4a3f37"; g.font = "700 40px Caveat"; g.textAlign = "center"; g.fillText(`for ${ME} ♡`, w / 2, h - 30); }
-  polaroidTex.needsUpdate = true;
-  photoGlow.material.opacity = received ? 0.5 : 0;
 }
 
 /* =========================================================
-   Camera: home view, zoom to the polaroid and back
+   Fairy lights: a verlet rope you can grab and fling
    ========================================================= */
-const homeTarget = new THREE.Vector3(0.1, 0.66, 0.05);
-const homeDir = new THREE.Vector3(0.28, 0.3, 1).normalize();
+const P = [];   // particles: x,y,z, px,py,pz, w (inverse mass, 0 = pinned)
+const C = [];   // distance constraints: [i, j, rest]
+const GRAV = -9.81;
+
+function particle(x, y, z, w = 1) { P.push({ x, y, z, px: x, py: y, pz: z, w, w0: w }); return P.length - 1; }
+function link(i, j, rest) { C.push([i, j, rest ?? Math.hypot(P[i].x - P[j].x, P[i].y - P[j].y, P[i].z - P[j].z)]); }
+
+// Rope through pinned anchors; slack[k] > 1 makes the swoop between anchor k and k+1 sag.
+function strand(anchors, slack, seg = 0.028) {
+  const ids = [particle(...anchors[0], 0)];
+  for (let k = 0; k < anchors.length - 1; k++) {
+    const a = new THREE.Vector3(...anchors[k]), b = new THREE.Vector3(...anchors[k + 1]);
+    const L = a.distanceTo(b), len = L * slack[k], n = Math.max(3, Math.round(len / seg));
+    const sag = Math.sqrt(Math.max(0, len * len - L * L)) * 0.5;
+    for (let s = 1; s <= n; s++) {
+      const t = s / n, q = a.clone().lerp(b, t);
+      q.y -= sag * 4 * t * (1 - t);
+      const id = particle(q.x, q.y, q.z, s === n ? 0 : 1);
+      link(ids[ids.length - 1], id, len / n);
+      ids.push(id);
+    }
+  }
+  return ids;
+}
+
+function buildLights() {
+  // Along the wall: big roller-coaster swoops between hooks at different heights.
+  const wz = WALL_Z + 0.025;
+  const wall = strand(
+    [[LEFT - 0.05, 2.33, wz], [-0.62, 2.02, wz], [-0.22, 2.36, wz], [0.5, 2.32, wz], [0.86, 2.0, wz], [RIGHT + 0.2, 2.36, wz]],
+    [1.12, 1.18, 1.32, 1.16, 1.14]);
+  // Along the safety rail, wrapped over the top bar.
+  const ry = Y0 + 0.37, rz = FRONT + 0.035;
+  const rail = strand(
+    [[LEFT + 0.02, ry + 0.04, rz], [-0.6, ry, rz], [-0.18, ry, rz], [0.22, ry, rz], [0.44, ry + 0.04, rz]],
+    [1.14, 1.2, 1.12, 1.1]);
+  // From the wall hook up to the ceiling and down to the foot post: a loose loop
+  const loop = strand([[0.86, 2.0, wz], [1.0, CEIL - 0.02, 0.1], [RIGHT, ry + 0.04, FRONT]], [1.25, 1.2]);
+
+  for (const ids of [wall, rail, loop]) strands.push(makeStrandMesh(ids));
+
+  // Polaroid: clipped with a peg to the lowest point of the big middle swoop.
+  let low = wall[0];
+  for (const id of wall) if (P[id].x > -0.2 && P[id].x < 0.5 && P[id].y < P[low].y) low = id;
+  const top = P[low];
+  const clip = particle(top.x, top.y - 0.015, top.z + 0.004, 0.5);
+  const bottom = particle(top.x, top.y - 0.015 - PH, top.z + 0.01, 0.35);
+  link(low, clip, 0.015); link(clip, bottom, PH);
+  polaroid.ids = { rope: low, clip, bottom };
+  buildPolaroid();
+
+  // Warm light pools that follow the wire
+  for (const [ids, every] of [[wall, 26], [rail, 30], [loop, 30]]) {
+    for (let k = Math.floor(every / 2); k < ids.length; k += every) {
+      const l = new THREE.PointLight(0xffa857, 0.2, 2.2, 2);
+      scene.add(l); twinkles.push({ l, id: ids[k], base: 0.2, phase: Math.random() * 10 });
+    }
+  }
+  settle(600);
+  restCenter = polaroidCenter();
+}
+
+let _glow;
+function glowTexture() {
+  if (_glow) return _glow;
+  const c = document.createElement("canvas"); c.width = c.height = 128;
+  const g = c.getContext("2d"), gr = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+  gr.addColorStop(0, "rgba(255,240,210,1)"); gr.addColorStop(0.08, "rgba(255,214,150,.9)");
+  gr.addColorStop(0.3, "rgba(255,170,90,.25)"); gr.addColorStop(1, "rgba(255,150,70,0)");
+  g.fillStyle = gr; g.fillRect(0, 0, 128, 128);
+  _glow = new THREE.CanvasTexture(c); _glow.colorSpace = THREE.SRGBColorSpace;
+  return _glow;
+}
+
+function makeStrandMesh(ids) {
+  const wire = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshStandardMaterial({ color: 0xb87333, metalness: 0.9, roughness: 0.35 }));
+  scene.add(wire);
+  const beads = [];
+  for (let k = 1; k < ids.length - 1; k += 2) beads.push(ids[k]);
+  const bulbGeo = new THREE.SphereGeometry(0.0028, 8, 6);
+  const bulbMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(3.0, 2.2, 1.3), toneMapped: false });
+  const inst = new THREE.InstancedMesh(bulbGeo, bulbMat, beads.length);
+  inst.frustumCulled = false; scene.add(inst);
+  // soft round halo around each LED
+  const gpos = new Float32Array(beads.length * 3), gcol = new Float32Array(beads.length * 3);
+  const gg = new THREE.BufferGeometry();
+  gg.setAttribute("position", new THREE.BufferAttribute(gpos, 3));
+  gg.setAttribute("color", new THREE.BufferAttribute(gcol, 3));
+  const halo = new THREE.Points(gg, new THREE.PointsMaterial({
+    map: glowTexture(), size: 0.11, sizeAttenuation: true, vertexColors: true, transparent: true,
+    blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
+  halo.frustumCulled = false; scene.add(halo);
+  const phases = beads.map(() => Math.random() * 6.28);
+  return { ids, wire, inst, beads, phases, halo, gpos, gcol };
+}
+
+// Verlet step with gravity, a slow draught, wall/bed collisions.
+function physics(dt, t) {
+  const d2 = dt * dt;
+  for (let i = 0; i < P.length; i++) {
+    const p = P[i]; if (!p.w) continue;
+    const damp = i === polaroid.ids?.bottom ? 0.985 : 0.993;
+    const wind = 0.05 * Math.sin(t * 0.6 + p.x * 3) + 0.03 * Math.sin(t * 1.7 + p.x * 7);
+    let vx = (p.x - p.px) * damp, vy = (p.y - p.py) * damp, vz = (p.z - p.pz) * damp;
+    const sp = Math.hypot(vx, vy, vz), max = 0.025;           // ≤ 3 m/s: no slingshots
+    if (sp > max) { vx *= max / sp; vy *= max / sp; vz *= max / sp; }
+    p.px = p.x; p.py = p.y; p.pz = p.z;
+    p.x += vx + wind * 0.3 * d2; p.y += vy + GRAV * d2; p.z += vz + wind * d2;
+  }
+  for (let it = 0; it < 14; it++) {
+    for (const [i, j, rest] of C) {
+      const a = P[i], b = P[j], wsum = a.w + b.w; if (!wsum) continue;
+      const dx = b.x - a.x, dy = b.y - a.y, dz = b.z - a.z;
+      const d = Math.hypot(dx, dy, dz) || 1e-6, k = (d - rest) / (d * wsum);
+      a.x += dx * k * a.w; a.y += dy * k * a.w; a.z += dz * k * a.w;
+      b.x -= dx * k * b.w; b.y -= dy * k * b.w; b.z -= dz * k * b.w;
+    }
+    for (const p of P) {
+      if (!p.w) continue;
+      if (p.z < WALL_Z + 0.006) p.z = WALL_Z + 0.006;
+      if (p.y > CEIL - 0.005) p.y = CEIL - 0.005;
+      if (p.x > LEFT && p.x < RIGHT && p.z > BACK && p.z < FRONT) { const h = duvetH(p.x, p.z) + 0.01; if (p.y < h) p.y = h; }
+    }
+  }
+}
+function settle(steps) { for (let i = 0; i < steps; i++) physics(1 / 120, i / 120); for (const p of P) { p.px = p.x; p.py = p.y; p.pz = p.z; } }
+
+const _m = new THREE.Matrix4(), _v = new THREE.Vector3();
+function updateStrands(t) {
+  for (const s of strands) {
+    const pts = s.ids.map(id => new THREE.Vector3(P[id].x, P[id].y, P[id].z));
+    const curve = new THREE.CatmullRomCurve3(pts);
+    s.wire.geometry.dispose();
+    s.wire.geometry = new THREE.TubeGeometry(curve, s.ids.length * 2, 0.0008, 4);
+    s.beads.forEach((id, k) => {
+      const tw = 0.75 + 0.25 * Math.sin(t * (0.8 + (k % 5) * 0.35) + s.phases[k]);
+      _m.makeScale(tw, tw, tw).setPosition(P[id].x, P[id].y - 0.002, P[id].z);
+      s.inst.setMatrixAt(k, _m);
+      s.gpos[k * 3] = P[id].x; s.gpos[k * 3 + 1] = P[id].y - 0.002; s.gpos[k * 3 + 2] = P[id].z;
+      const b = 0.55 * tw; s.gcol[k * 3] = b; s.gcol[k * 3 + 1] = b * 0.85; s.gcol[k * 3 + 2] = b * 0.6;
+    });
+    s.inst.instanceMatrix.needsUpdate = true;
+    s.halo.geometry.attributes.position.needsUpdate = true;
+    s.halo.geometry.attributes.color.needsUpdate = true;
+  }
+  for (const f of twinkles) {
+    const p = P[f.id]; f.l.position.set(p.x, p.y - 0.1, p.z + (0.05 - p.z) * 0.45);
+    f.l.intensity = f.base * (0.9 + 0.1 * Math.sin(t * 1.3 + f.phase));
+  }
+}
+
+/* =========================================================
+   The polaroid hanging from the lights
+   ========================================================= */
+const PW = 0.088 * 1.2, PH = 0.107 * 1.2;   // a real Polaroid, a little larger
+let polaroidTex;
+function buildPolaroid() {
+  const g = new THREE.Group(); scene.add(g); polaroid.group = g;
+  const card = new THREE.Group(); card.position.y = -PH / 2; g.add(card);
+  // card body (back is plain matte paper) + glossy printed front
+  add(new THREE.BoxGeometry(PW, PH, 0.0012), new THREE.MeshStandardMaterial({ color: 0xe9e4da, roughness: 0.85 }), 0, 0, -0.0006, 0, 0, 0, card);
+  const c = document.createElement("canvas"); c.width = 440; c.height = 535;
+  polaroidTex = new THREE.CanvasTexture(c); polaroidTex.colorSpace = THREE.SRGBColorSpace; polaroidTex.anisotropy = maxAniso;
+  const front = new THREE.MeshPhysicalMaterial({ map: polaroidTex, roughness: 0.42, clearcoat: 0.35, clearcoatRoughness: 0.25 });
+  add(new THREE.PlaneGeometry(PW, PH), front, 0, 0, 0.0001, 0, 0, 0, card);
+  // tiny wooden peg at the top
+  const peg = new THREE.MeshStandardMaterial({ color: 0xcdb08a, roughness: 0.8 });
+  for (const s of [-1, 1]) add(new THREE.BoxGeometry(0.0075, 0.03, 0.003), peg, 0, -0.004, s * 0.0024, 0, 0, 0, g);
+  add(new THREE.TorusGeometry(0.0035, 0.0007, 6, 14), new THREE.MeshStandardMaterial({ color: 0xaaaaaa, metalness: 1, roughness: 0.3 }), 0, -0.008, 0, 0, Math.PI / 2, 0, g);
+  polaroid.hit = new THREE.Mesh(new THREE.PlaneGeometry(PW * 1.9, PH * 1.6), new THREE.MeshBasicMaterial({ visible: false }));
+  polaroid.hit.position.y = -PH / 2; g.add(polaroid.hit);
+  polaroid.yaw = 0; polaroid.yawV = 0;
+  paintPolaroid();
+}
+
+// Orient the card from its two physics particles, with a damped twist.
+const _up = new THREE.Vector3(), _fw = new THREE.Vector3(), _rt = new THREE.Vector3(), _basis = new THREE.Matrix4();
+function updatePolaroid(dt) {
+  const { clip, bottom } = polaroid.ids, a = P[clip], b = P[bottom];
+  _up.set(a.x - b.x, a.y - b.y, a.z - b.z).normalize();
+  const sway = (b.x - b.px) / dt;                          // sideways motion twists the card
+  polaroid.yawV += (-6 * polaroid.yaw - 1.2 * polaroid.yawV + sway * 1.5) * dt;
+  polaroid.yaw += polaroid.yawV * dt;
+  _fw.set(Math.sin(polaroid.yaw + 0.12), 0, Math.cos(polaroid.yaw + 0.12));
+  _rt.crossVectors(_up, _fw).normalize();
+  _fw.crossVectors(_rt, _up).normalize();
+  _basis.makeBasis(_rt, _up, _fw);
+  polaroid.group.quaternion.setFromRotationMatrix(_basis);
+  polaroid.group.position.set(a.x, a.y + 0.012, a.z);
+}
+
+// The small polaroid is "clouded": the photo shows through a milky, undeveloped haze.
+function paintPolaroid() {
+  if (!polaroidTex) return;
+  const c = polaroidTex.image, g = c.getContext("2d"), w = c.width, h = c.height;
+  g.fillStyle = "#f2eee5"; g.fillRect(0, 0, w, h);
+  for (let i = 0; i < 9000; i++) { g.fillStyle = `rgba(80,70,60,${Math.random() * 0.05})`; g.fillRect(Math.random() * w, Math.random() * h, 1.2, 1.2); }
+  const px = 25, py = 25, ps = w - 50;
+  if (received) {
+    const tiny = document.createElement("canvas"); tiny.width = tiny.height = 16;
+    const img = received.img, s = Math.min(img.width, img.height);
+    tiny.getContext("2d").drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, 16, 16);
+    g.imageSmoothingEnabled = true; g.imageSmoothingQuality = "high";
+    g.drawImage(tiny, px, py, ps, ps);
+    g.fillStyle = "rgba(225,226,215,.5)"; g.fillRect(px, py, ps, ps);
+  } else {
+    const gr = g.createLinearGradient(px, py, px + ps, py + ps);
+    gr.addColorStop(0, "#545c58"); gr.addColorStop(.55, "#858c84"); gr.addColorStop(1, "#5f6761");
+    g.fillStyle = gr; g.fillRect(px, py, ps, ps);
+  }
+  let seed = 7; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  for (let i = 0; i < 10; i++) {
+    const cx = px + rnd() * ps, cy = py + rnd() * ps, r = ps * (0.2 + rnd() * 0.4);
+    const gr = g.createRadialGradient(cx, cy, 0, cx, cy, r);
+    gr.addColorStop(0, `rgba(250,252,246,${received ? .3 : .2})`); gr.addColorStop(1, "rgba(250,252,246,0)");
+    g.fillStyle = gr; g.fillRect(px, py, ps, ps);
+  }
+  g.strokeStyle = "rgba(0,0,0,.18)"; g.lineWidth = 2; g.strokeRect(px, py, ps, ps);
+  if (received) { g.fillStyle = "#2b2420"; g.font = "54px 'Great Vibes'"; g.textAlign = "center"; g.fillText(`for ${ME}`, w / 2, h - 45); }
+  polaroidTex.needsUpdate = true;
+}
+
+/* =========================================================
+   Post-processing: depth of field, bloom, vignette + grain
+   ========================================================= */
+let composer, bokeh, grain;
+const FilmShader = {
+  uniforms: { tDiffuse: { value: null }, time: { value: 0 }, amount: { value: 0.028 }, vig: { value: 1.15 } },
+  vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.); }`,
+  fragmentShader: `uniform sampler2D tDiffuse; uniform float time, amount, vig; varying vec2 vUv;
+    float h(vec2 p){ return fract(sin(dot(p, vec2(12.9898,78.233))) * 43758.5453); }
+    void main(){ vec4 c = texture2D(tDiffuse, vUv);
+      float d = distance(vUv, vec2(.5)); c.rgb *= smoothstep(vig, .25, d);
+      c.rgb += (h(vUv * 1000. + time) - .5) * amount;
+      gl_FragColor = c; }`,
+};
+function buildComposer() {
+  composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4 }));
+  composer.addPass(new RenderPass(scene, camera));
+  bokeh = new BokehPass(scene, camera, { focus: 1.3, aperture: 0.0018, maxblur: 0.0035 });
+  composer.addPass(bokeh); bokeh.enabled = !location.search.includes("nobokeh");
+  composer.addPass(new UnrealBloomPass(new THREE.Vector2(256, 256), 0.35, 0.4, 1.2));
+  composer.addPass(new OutputPass());
+  grain = new ShaderPass(FilmShader);
+  composer.addPass(grain);
+}
+
+/* =========================================================
+   Camera: standing on the ladder, looking into the top bunk
+   ========================================================= */
+const homePos0 = new THREE.Vector3(0.6, 2.12, 0.78);
 const camPos = new THREE.Vector3(), camTarget = new THREE.Vector3();
 let tween = null;
 let view = "home"; // home | zooming | open
 const pointer = { x: 0, y: 0 };
 
-function homePos() {
-  return homeTarget.clone().addScaledVector(homeDir, innerWidth / innerHeight < 1 ? 2.15 : 1.75);
+function polaroidCenter(out = new THREE.Vector3()) {
+  const { clip, bottom } = polaroid.ids;
+  return out.set((P[clip].x + P[bottom].x) / 2, (P[clip].y + P[bottom].y) / 2, (P[clip].z + P[bottom].z) / 2);
 }
+function homePos() { return homePos0.clone().add(new THREE.Vector3(0, 0, innerWidth / innerHeight < 1 ? 0.12 : -0.1)); }
+let restCenter = null;
+function homeTarget() { return (restCenter || polaroidCenter()).clone().add(new THREE.Vector3(0, -0.24, 0)); }
 function closeView() {
-  const pos = new THREE.Vector3(), q = new THREE.Quaternion();
-  polaroidGroup.getWorldPosition(pos); polaroidGroup.getWorldQuaternion(q);
-  const normal = new THREE.Vector3(0, 0, 1).applyQuaternion(q);
-  return { pos: pos.clone().addScaledVector(normal, 0.75), target: pos };
+  const c = polaroidCenter();
+  const n = new THREE.Vector3(0, 0, 1).applyQuaternion(polaroid.group.quaternion);
+  return { pos: c.clone().addScaledVector(n, 0.32), target: c };
 }
 function flyTo(pos, target, ms, done) {
   tween = { fromP: camPos.clone(), fromT: camTarget.clone(), toP: pos, toT: target, t0: performance.now(), ms, done };
@@ -513,7 +733,7 @@ function openPolaroid(instant = false) {
   if (!renderer) return show();
   const { pos, target } = closeView();
   if (instant) { camPos.copy(pos); camTarget.copy(target); show(); }
-  else { flyTo(pos, target, 1100, null); setTimeout(show, 650); }
+  else { flyTo(pos, target, 1200, null); setTimeout(show, 750); }
 }
 function closePolaroid() {
   if (view !== "open" || !renderer) return;
@@ -521,7 +741,7 @@ function closePolaroid() {
   $("overlay").classList.remove("open");
   $("status").textContent = "";
   view = "zooming";
-  flyTo(homePos(), homeTarget.clone(), 1100, () => { view = "home"; $("taphint").classList.remove("gone"); });
+  flyTo(homePos(), homeTarget(), 1200, () => { view = "home"; $("taphint").classList.remove("gone"); });
 }
 
 /* =========================================================
@@ -599,7 +819,7 @@ $("send").onclick = async () => {
     setTimeout(() => {
       URL.revokeObjectURL(pending.url); pending = null; setMode(false); renderOverlay(false);
       renderer ? closePolaroid() : ($("status").textContent = "");
-    }, 900);
+    }, 1000);
   } catch (err) {
     $("status").textContent = "couldn't send: " + err.message;
   }
@@ -609,7 +829,7 @@ $("send").onclick = async () => {
 function setMode(previewing) {
   $("send").hidden = $("cancel").hidden = !previewing;
   $("pick").hidden = previewing;
-  $("close").hidden = previewing;
+  $("close").hidden = previewing || !renderer;
 }
 
 $("close").onclick = closePolaroid;
@@ -635,59 +855,120 @@ if (isIOS && !navigator.standalone && !hintSeen) $("hint").hidden = false;
 $("hideHint").onclick = () => { $("hint").hidden = true; try { localStorage.setItem("hint_seen", "1"); } catch {} };
 
 /* =========================================================
-   Input, resize, render loop
+   Touch: grab the wire or the polaroid, fling it; tap the polaroid to open
    ========================================================= */
 const raycaster = new THREE.Raycaster();
-let downAt = null;
-canvas.addEventListener("pointerdown", e => { downAt = { x: e.clientX, y: e.clientY }; });
-canvas.addEventListener("pointerup", e => {
-  if (!downAt || Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) > 12 || view !== "home" || !hitMesh) return;
-  const ndc = new THREE.Vector2((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
-  raycaster.setFromCamera(ndc, camera);
-  if (raycaster.intersectObject(hitMesh).length) openPolaroid();
-});
-addEventListener("pointermove", e => {
-  pointer.x = (e.clientX / innerWidth) * 2 - 1;
-  pointer.y = (e.clientY / innerHeight) * 2 - 1;
-});
-addEventListener("deviceorientation", e => {
-  if (e.gamma == null) return;
-  pointer.x = Math.max(-1, Math.min(1, e.gamma / 25));
-  pointer.y = Math.max(-1, Math.min(1, (e.beta - 45) / 25));
-});
+let grab = null;
+const ndcOf = e => new THREE.Vector2((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
 
+canvas.addEventListener("pointerdown", e => {
+  if (view !== "home" || !renderer) return;
+  canvas.setPointerCapture(e.pointerId);
+  raycaster.setFromCamera(ndcOf(e), camera);
+  let id = null, isPol = false;
+  if (raycaster.intersectObject(polaroid.hit).length) { id = polaroid.ids.bottom; isPol = true; }
+  else {
+    // nearest bit of wire on screen, within ~40px
+    let best = 40 * 40;
+    for (const s of strands) for (const pid of s.ids) {
+      const p = P[pid]; if (!p.w) continue;
+      _v.set(p.x, p.y, p.z).project(camera);
+      const sx = (_v.x + 1) / 2 * innerWidth, sy = (1 - _v.y) / 2 * innerHeight, d = (sx - e.clientX) ** 2 + (sy - e.clientY) ** 2;
+      if (d < best && _v.z < 1) { best = d; id = pid; }
+    }
+  }
+  if (id == null) return;
+  const p = P[id], n = new THREE.Vector3(); camera.getWorldDirection(n);
+  grab = { id, isPol, plane: new THREE.Plane().setFromNormalAndCoplanarPoint(n, new THREE.Vector3(p.x, p.y, p.z)),
+           start: { x: e.clientX, y: e.clientY }, t0: performance.now(), moved: false, target: null };
+});
+canvas.addEventListener("pointermove", e => {
+  pointer.x = (e.clientX / innerWidth) * 2 - 1; pointer.y = (e.clientY / innerHeight) * 2 - 1;
+  if (!grab) return;
+  if (Math.hypot(e.clientX - grab.start.x, e.clientY - grab.start.y) > 8) grab.moved = true;
+  if (!grab.moved) return;
+  raycaster.setFromCamera(ndcOf(e), camera);
+  const hit = new THREE.Vector3();
+  if (raycaster.ray.intersectPlane(grab.plane, hit)) grab.target = hit;
+});
+const release = () => {
+  if (!grab) return;
+  const g = grab; grab = null;
+  if (g.isPol && !g.moved && performance.now() - g.t0 < 500) openPolaroid();
+};
+canvas.addEventListener("pointerup", release);
+canvas.addEventListener("pointercancel", release);
+
+function applyGrab() {
+  if (!grab || !grab.target) return;
+  const p = P[grab.id];
+  // a strong spring toward the finger (the wire's own length still holds it back),
+  // and verlet keeps the velocity, so letting go flings it
+  p.x += (grab.target.x - p.x) * 0.3; p.y += (grab.target.y - p.y) * 0.3; p.z += (grab.target.z - p.z) * 0.3;
+  p.z = Math.max(p.z, WALL_Z + 0.01);
+}
+
+window.__screen = () => {
+  const toPx = v => { v.project(camera); return [(v.x + 1) / 2 * innerWidth, (1 - v.y) / 2 * innerHeight]; };
+  const w = polaroid.ids.rope - 9;
+  return { polaroid: toPx(polaroidCenter()), wire: toPx(new THREE.Vector3(P[w].x, P[w].y, P[w].z)) };
+};
+
+/* =========================================================
+   Resize + render loop (with automatic quality drop on slow phones)
+   ========================================================= */
+let pixelRatio = Math.min(devicePixelRatio, 1.75);
 function resize() {
   const w = innerWidth, h = innerHeight;
   camera.aspect = w / h;
-  camera.fov = w / h < 1 ? 58 : 45;
+  camera.fov = w / h < 1 ? 54 : 44;
   camera.updateProjectionMatrix();
-  if (renderer) renderer.setSize(w, h, false);
+  if (!renderer) return;
+  renderer.setPixelRatio(pixelRatio); renderer.setSize(w, h, false);
+  composer.setPixelRatio(pixelRatio); composer.setSize(w, h);
   if (view === "home" && !tween) camPos.copy(homePos());
 }
 addEventListener("resize", resize);
 
-const clock = new THREE.Clock();
-function frame() {
+let last = performance.now(), acc = 0, simT = 0, slowCheckAt = performance.now() + 2500;
+const frameTimes = [];
+function frame(now) {
   requestAnimationFrame(frame);
-  if (document.hidden) return;
-  const t = clock.getElapsedTime();
+  if (document.hidden) { last = now; return; }
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  frameTimes.push(dt); if (frameTimes.length > 120) frameTimes.shift();
+
+  // physics at a fixed 120 Hz
+  acc += dt;
+  while (acc >= 1 / 120) { applyGrab(); physics(1 / 120, simT); simT += 1 / 120; acc -= 1 / 120; }
+  updateStrands(simT);
+  updatePolaroid(dt || 1 / 60);
+
   if (tween) {
-    const k = Math.min(1, (performance.now() - tween.t0) / tween.ms), e = ease(k);
+    const k = Math.min(1, (now - tween.t0) / tween.ms), e = ease(k);
     camPos.lerpVectors(tween.fromP, tween.toP, e);
     camTarget.lerpVectors(tween.fromT, tween.toT, e);
     if (k >= 1) { const d = tween.done; tween = null; d && d(); }
   }
-  // Gentle drift and parallax in the home view
-  const sway = view === "home" ? 1 : 0.15;
-  camera.position.set(
-    camPos.x + (pointer.x * 0.12 + Math.sin(t * 0.3) * 0.02) * sway,
-    camPos.y + (-pointer.y * 0.06 + Math.sin(t * 0.4) * 0.01) * sway,
-    camPos.z);
+  const sway = view === "home" && !grab ? 1 : 0;
+  camera.position.set(camPos.x + (pointer.x * 0.04 + Math.sin(simT * 0.25) * 0.012) * sway,
+                      camPos.y + Math.sin(simT * 0.33) * 0.008 * sway, camPos.z);
   camera.lookAt(camTarget);
-  for (const b of bulbs) b.glow.material.opacity = 0.6 + 0.4 * Math.sin(t * b.speed + b.phase) ** 2;
-  for (const f of twinkleLights) f.l.intensity = f.base * (0.85 + 0.15 * Math.sin(t * 1.3 + f.phase));
-  if (received) photoGlow.material.opacity = 0.35 + 0.2 * Math.sin(t * 2);
-  renderer.render(scene, camera);
+
+  bokeh.uniforms.focus.value = camera.position.distanceTo(polaroidCenter(_v));
+  grain.uniforms.time.value = simT;
+  composer.render();
+
+  // adapt quality once, after a couple of seconds
+  if (slowCheckAt && now > slowCheckAt) {
+    const recent = frameTimes.slice(-60), avg = recent.reduce((a, b) => a + b, 0) / recent.length;
+    if (avg > 1 / 34) {
+      bokeh.enabled = false;
+      if (avg > 1 / 24) { pixelRatio = 1; renderer.shadowMap.enabled = false; }
+      resize();
+    }
+    slowCheckAt = 0;
+  }
 }
 
 /* =========================================================
@@ -695,21 +976,21 @@ function frame() {
    ========================================================= */
 (async () => {
   if (renderer) {
-    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.shadowMap.type = THREE.VSMShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 0.95;
-    buildScene();
+    renderer.toneMappingExposure = 1.0;
+    buildRoom();
+    buildComposer();
   } else {
-    $("close").style.display = "none";
+    $("close").hidden = true;
   }
   resize();
-  camPos.copy(homePos()); camTarget.copy(homeTarget);
-  try { await document.fonts.load("700 40px Caveat"); } catch {}
+  if (renderer) { camPos.copy(homePos()); camTarget.copy(homeTarget()); }
+  try { await document.fonts.load("54px 'Great Vibes'"); } catch {}
 
   await refresh();
-  if (renderer) { paintPolaroid(); frame(); }
+  if (renderer) { paintPolaroid(); requestAnimationFrame(frame); }
   // A photo is waiting → start with it already open.
   if (received || !renderer) openPolaroid(true);
   else $("taphint").classList.remove("gone");
