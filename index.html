@@ -334,9 +334,10 @@ function woodBox(w, h, d, texSize = 0.9) {
 function add(geo, material, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0, parent = scene, shadows = true) {
   const m = new THREE.Mesh(geo, material);
   m.position.set(x, y, z); m.rotation.set(rx, ry, rz);
-  m.castShadow = m.receiveShadow = shadows;
+  m.castShadow = false; m.receiveShadow = shadows;      // casting is opted into (walls, window, furniture)
   parent.add(m); return m;
 }
+const caster = m => { m.castShadow = true; return m; };
 // A grid surface whose height comes from f(x, z); post(x, z, y) can bend it further.
 function surface(x0, x1, z0, z1, nx, nz, f, post) {
   const g = new THREE.PlaneGeometry(1, 1, nx, nz);
@@ -379,7 +380,14 @@ function duvetH(x, z) {
   }
   return h;
 }
-const onBed = (x, z, sink = 0) => duvetH(x, z) - sink;
+// the knit throw crumpled over the foot (and your lap)
+const THROW = { x0: 0.48, x1: 1.0, z0: -0.38, z1: 0.45 };
+const throwH = (x, z) => {
+  const e = THREE.MathUtils.smoothstep(THROW.x0, THROW.x0 + 0.08, x) * THREE.MathUtils.smoothstep(THROW.z1, THROW.z1 - 0.07, z) * THREE.MathUtils.smoothstep(THROW.z0, THROW.z0 + 0.07, z);
+  return duvetH(x, z) + 0.007 + e * (0.014 + 0.05 * Math.max(0, fbm(x * 4, z * 4, 9.1)) + 0.02 * (fbm(x * 9, z * 9, 2.2, 2) + 0.5));
+};
+const topH = (x, z) => (x > THROW.x0 && x < THROW.x1 && z > THROW.z0 && z < THROW.z1) ? Math.max(duvetH(x, z), throwH(x, z)) : duvetH(x, z);
+const onBed = (x, z, sink = 0) => topH(x, z) - sink;
 
 /* =========================================================
    Room: floor, walls with a window, ceiling, skirting
@@ -394,7 +402,7 @@ function buildRoom() {
   const wallC = 0xf3d9c4;   // warm peach plaster
   // back wall, built around the window opening
   const backW = paint([3, 2], wallC);
-  const plane = (w, h, x, y, z, ry = 0, mat = backW) => focusTargets.push(add(new THREE.PlaneGeometry(w, h), mat, x, y, z, 0, ry));
+  const plane = (w, h, x, y, z, ry = 0, mat = backW) => focusTargets.push(caster(add(new THREE.PlaneGeometry(w, h), mat, x, y, z, 0, ry)));
   plane(WIN.x0 - RX0, CEIL, (RX0 + WIN.x0) / 2, CEIL / 2, WALL_Z);
   plane(RX1 - WIN.x1, CEIL, (WIN.x1 + RX1) / 2, CEIL / 2, WALL_Z);
   plane(WIN.x1 - WIN.x0, WIN.y0, (WIN.x0 + WIN.x1) / 2, WIN.y0 / 2, WALL_Z);
@@ -423,27 +431,15 @@ function buildWindow() {
   add(new THREE.BoxGeometry(w + 0.1, 0.06, 0.12), frame, cx, y1 + 0.03, WALL_Z - 0.02);
   add(new THREE.BoxGeometry(w + 0.2, 0.04, 0.24), frame, cx, y0 - 0.02, WALL_Z + 0.03);
   for (const x of [x0 - 0.025, x1 + 0.025]) add(new THREE.BoxGeometry(0.05, h + 0.06, 0.12), frame, x, cy, WALL_Z - 0.02);
-  add(new THREE.BoxGeometry(0.035, h, 0.05), frame, cx, cy, WALL_Z - 0.05);
-  add(new THREE.BoxGeometry(w, 0.035, 0.05), frame, cx, cy + 0.12, WALL_Z - 0.05);
+  caster(add(new THREE.BoxGeometry(0.035, h, 0.05), frame, cx, cy, WALL_Z - 0.05));
+  caster(add(new THREE.BoxGeometry(w, 0.035, 0.05), frame, cx, cy + 0.12, WALL_Z - 0.05));
   // reveal (wall thickness)
   const reveal = pbr("painted_plaster_wall", { repeat: [1, 1], color: 0xf3d9c4, normal: 0.5 });
-  add(new THREE.BoxGeometry(w + 0.6, 0.3, 0.26), reveal, cx, y1 + 0.15, WALL_Z - 0.136);
-  add(new THREE.BoxGeometry(w + 0.6, y0, 0.26), reveal, cx, y0 / 2, WALL_Z - 0.136);
-  for (const s of [-1, 1]) add(new THREE.BoxGeometry(0.3, h, 0.26), reveal, cx + s * (w / 2 + 0.15), cy, WALL_Z - 0.136);
+  caster(add(new THREE.BoxGeometry(w + 0.6, 0.3, 0.26), reveal, cx, y1 + 0.15, WALL_Z - 0.136));
+  caster(add(new THREE.BoxGeometry(w + 0.6, y0, 0.26), reveal, cx, y0 / 2, WALL_Z - 0.136));
+  for (const s of [-1, 1]) caster(add(new THREE.BoxGeometry(0.3, h, 0.26), reveal, cx + s * (w / 2 + 0.15), cy, WALL_Z - 0.136));
   // glass
-  add(new THREE.PlaneGeometry(w, h), new THREE.MeshPhysicalMaterial({ color: 0xaabbd0, roughness: 0.05, metalness: 0, transparent: true, opacity: 0.1, envMapIntensity: 2 }), cx, cy, WALL_Z - 0.06, 0, 0, 0, scene, false);
-
-  // frost creeping in from the corners of the glass
-  const frost = canvasTexture(512, 512, (g, W) => {
-    for (let k = 0; k < 2600; k++) {
-      const a = Math.random() * Math.PI * 2, rr = Math.random();
-      const ex = Math.random() < 0.5 ? (Math.random() < 0.5 ? 0 : W) : Math.random() * W;
-      const ey = ex === 0 || ex === W ? Math.random() * W : (Math.random() < 0.5 ? 0 : W);
-      const x = ex + Math.cos(a) * rr * 90, y = ey + Math.sin(a) * rr * 90;
-      g.fillStyle = `rgba(235,242,255,${(1 - rr) * 0.22})`; g.beginPath(); g.arc(x, y, 1 + Math.random() * 3, 0, 7); g.fill();
-    }
-  });
-  add(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: frost, transparent: true, depthWrite: false }), cx, cy, WALL_Z - 0.058, 0, 0, 0, scene, false).userData.fx = true;
+  add(new THREE.PlaneGeometry(w, h), new THREE.MeshPhysicalMaterial({ color: 0xdfe8f2, roughness: 0.08, metalness: 0, transparent: true, opacity: 0.05, envMapIntensity: 0.25 }), cx, cy, WALL_Z - 0.06, 0, 0, 0, scene, false);
 
   buildOutside(cx, cy, w);
 
@@ -455,7 +451,7 @@ function buildWindow() {
   for (const s of [-1, 1]) {
     const cw = 0.55, ch = rodY - 0.05;
     const g = new THREE.PlaneGeometry(cw, ch, 36, 40), p = g.attributes.position, base = p.array.slice();
-    const curtain = add(g, velvet, cx + s * (w / 2 + 0.12), rodY - ch / 2, WALL_Z + 0.08);
+    const curtain = caster(add(g, velvet, cx + s * (w / 2 + 0.12), rodY - ch / 2, WALL_Z + 0.08));
     const update = t => {
       for (let i = 0; i < p.count; i++) {
         const u = base[i * 3] / cw + 0.5, v = 0.5 - base[i * 3 + 1] / ch;           // v: 0 top → 1 bottom
@@ -493,15 +489,16 @@ function buildOutside(cx, cy, w) {
   add(new THREE.BoxGeometry(w + 0.16, 0.05, 0.18), extSill, cx, WIN.y0 - 0.03, WALL_Z - 0.33);
   const drift = surface(cx - w / 2 - 0.06, cx + w / 2 + 0.06, WALL_Z - 0.41, WALL_Z - 0.26, 40, 10,
     (x, z) => WIN.y0 + 0.012 + 0.035 * Math.sin((z - WALL_Z + 0.41) / 0.15 * Math.PI) * (0.7 + 0.3 * fbm(x * 9, z * 9)));
-  const snowMat = new THREE.MeshStandardMaterial({ color: 0xeef3fb, roughness: 0.75 });
+  const snowMat = new THREE.MeshStandardMaterial({ color: 0xf4f7fc, roughness: 0.8, emissive: 0xd0dbf2, emissiveIntensity: 0.95 });
+  const snowGround = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.85, normalMap: tex("snow_floor", "nor_gl", [14, 14]), emissive: 0xdde6f8, emissiveIntensity: 0.62 });
   add(drift, snowMat, 0, 0, 0, 0, 0, 0, scene, false);
 
   // sky dome with stars and a soft moon
   const skyTex = canvasTexture(2048, 1024, (g, W, H) => {
     const gr = g.createLinearGradient(0, 0, 0, H * 0.5);
-    gr.addColorStop(0, "#050b22"); gr.addColorStop(0.7, "#1a2550"); gr.addColorStop(1, "#3c4473");
+    gr.addColorStop(0, "#0e1838"); gr.addColorStop(0.6, "#3a4775"); gr.addColorStop(1, "#9aa6cc");
     g.fillStyle = gr; g.fillRect(0, 0, W, H);
-    for (let i = 0; i < 900; i++) { g.fillStyle = `rgba(255,255,255,${Math.random() * 0.7})`; g.fillRect(Math.random() * W, Math.random() * H * 0.42, Math.random() < 0.95 ? 1 : 2, 1); }
+    for (let i = 0; i < 400; i++) { g.fillStyle = `rgba(255,255,255,${Math.random() * 0.5})`; g.fillRect(Math.random() * W, Math.random() * H * 0.3, Math.random() < 0.95 ? 1 : 2, 1); }
   });
   const sky = new THREE.Mesh(new THREE.SphereGeometry(40, 32, 16), new THREE.MeshBasicMaterial({ map: skyTex, side: THREE.BackSide, fog: false, depthWrite: false }));
   sky.position.set(cx, 0, WALL_Z - 6); sky.rotation.y = Math.PI * 0.5; scene.add(sky);
@@ -511,22 +508,23 @@ function buildOutside(cx, cy, w) {
   moonDisk.position.copy(moon.position).add(new THREE.Vector3(0, 0, 0.1)); scene.add(moonDisk);
 
   // snowy ground with soft bumps
-  const ground = surface(cx - 9, cx + 9, WALL_Z - 0.4, WALL_Z - 30, 90, 90, (x, z) => -0.25 + 0.06 * fbm(x * 0.6, z * 0.6) + 0.02 * fbm(x * 3, z * 3));
-  ground.computeVertexNormals();
-  add(ground, new THREE.MeshStandardMaterial({ color: 0xe6edf8, roughness: 0.85 }), 0, 0, 0, 0, 0, 0, scene, false);
+  const ground = surface(cx - 9, cx + 9, WALL_Z - 30, WALL_Z - 0.4, 120, 120, (x, z) => 0.05 + 0.12 * fbm(x * 0.5, z * 0.5) + 0.03 * fbm(x * 2.5, z * 2.5)
+    + 0.18 * Math.exp(-((z - WALL_Z + 3.2) ** 2) * 6) + 0.25 * Math.exp(-((z - WALL_Z + 0.6) ** 2) * 3));   // drifts along the fence and the house wall
+  add(ground, snowGround, 0, 0, 0, 0, 0, 0, scene, false);
 
   // a picket fence with snow caps
-  const wood = new THREE.MeshStandardMaterial({ color: 0x5a4436, roughness: 0.9 });
+  const wood = new THREE.MeshStandardMaterial({ color: 0x8c8277, roughness: 0.95 });
   for (let x = cx - 6; x < cx + 6; x += 0.22) {
     add(new THREE.BoxGeometry(0.08, 0.8, 0.03), wood, x, 0.15, WALL_Z - 3.2, 0, 0, 0, scene, false);
-    add(new THREE.BoxGeometry(0.09, 0.03, 0.05), snowMat, x, 0.565, WALL_Z - 3.2, 0, 0, 0, scene, false);
+    add(new THREE.SphereGeometry(0.05, 10, 6), snowMat, x, 0.56, WALL_Z - 3.2, 0, 0, 0, scene, false).scale.set(1, 0.55, 0.8);
   }
-  for (const y of [0.05, 0.4]) add(new THREE.BoxGeometry(12, 0.06, 0.03), wood, cx, y, WALL_Z - 3.17, 0, 0, 0, scene, false);
+  add(new THREE.BoxGeometry(12, 0.06, 0.03), wood, cx, 0.4, WALL_Z - 3.17, 0, 0, 0, scene, false);
+  add(new THREE.BoxGeometry(12, 0.04, 0.07), snowMat, cx, 0.445, WALL_Z - 3.17, 0, 0, 0, scene, false);
 
   // houses across the street: snowy gable roofs, warm windows, smoking chimneys
   const winMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(2.2, 1.4, 0.6), toneMapped: false });
   const winMat2 = new THREE.MeshBasicMaterial({ color: new THREE.Color(1.6, 0.8, 0.35), toneMapped: false });
-  const wallCols = [0x4a3b3a, 0x3d4457, 0x55463c, 0x40484a];
+  const wallCols = [0x8a6f66, 0x6f7a90, 0x9a8676, 0x7d8a8c];
   let hx = cx - 8;
   for (let k = 0; hx < cx + 8; k++) {
     const bw = 2.2 + (k * 37 % 10) / 10 * 1.4, bh = 2.4 + (k * 53 % 10) / 10 * 1.6, bd = 3, hz = WALL_Z - 10.5 - (k % 2) * 1.2;
@@ -547,7 +545,7 @@ function buildOutside(cx, cy, w) {
     for (let l = 0; l < 4; l++) {
       const rr = (0.9 - l * 0.18) * sc, hh = 0.9 * sc, yy = -0.2 + l * 0.55 * sc + hh / 2;
       add(new THREE.ConeGeometry(rr, hh, 10), pine, tx, yy, WALL_Z + tz, 0, l, 0, scene, false);
-      add(new THREE.ConeGeometry(rr * 0.92, hh * 0.35, 10), snowMat, tx, yy + hh * 0.2, WALL_Z + tz, 0, l, 0, scene, false);
+      add(new THREE.ConeGeometry(rr * 0.97, hh * 0.55, 10), snowMat, tx, yy + hh * 0.12, WALL_Z + tz, 0, l, 0, scene, false);
     }
   });
 
@@ -560,13 +558,13 @@ function buildOutside(cx, cy, w) {
   const lamp = new THREE.PointLight(0xffc27a, 6, 9, 1.6); lamp.position.copy(lampPos); scene.add(lamp);
 
   // falling snow: thousands of flakes of different sizes, drifting, brighter near the lamp
-  const N = 2600, pos = new Float32Array(N * 3), size = new Float32Array(N), seed = new Float32Array(N);
+  const N = 4200, pos = new Float32Array(N * 3), size = new Float32Array(N), seed = new Float32Array(N);
   for (let i = 0; i < N; i++) {
-    const near = i < 160;                                   // a few big soft flakes close to the glass
+    const near = i < 90;                                   // a few big soft flakes close to the glass
     pos[i * 3] = cx + (Math.random() - 0.5) * (near ? 2.4 : 12);
     pos[i * 3 + 1] = Math.random() * 6 - 0.3;
     pos[i * 3 + 2] = WALL_Z - (near ? 0.5 + Math.random() * 0.8 : 1.4 + Math.random() * 13);
-    size[i] = near ? 0.012 + Math.random() * 0.012 : 0.006 + Math.random() * 0.01;
+    size[i] = near ? 0.014 + Math.random() * 0.012 : 0.009 + Math.random() * 0.014;
     seed[i] = Math.random();
   }
   const g = new THREE.BufferGeometry();
@@ -575,7 +573,7 @@ function buildOutside(cx, cy, w) {
   g.setAttribute("aSeed", new THREE.BufferAttribute(seed, 1));
   const snowShader = new THREE.ShaderMaterial({
     transparent: true, depthWrite: false,
-    uniforms: { time: { value: 0 }, lamp: { value: lampPos }, scale: { value: innerHeight * 0.9 } },
+    uniforms: { time: { value: 0 }, lamp: { value: lampPos }, scale: { value: innerHeight * 1.8 } },
     vertexShader: `attribute float aSize, aSeed; uniform float time, scale; uniform vec3 lamp; varying float vA, vL;
       void main(){
         vec3 p = position;
@@ -601,7 +599,7 @@ function buildOutside(cx, cy, w) {
   flameMats.push(snowShader);
   const snow = new THREE.Points(g, snowShader);
   snow.frustumCulled = false; snow.userData.fx = true; scene.add(snow);
-  addEventListener("resize", () => { snowShader.uniforms.scale.value = innerHeight * 0.9; });
+  addEventListener("resize", () => { snowShader.uniforms.scale.value = innerHeight * 1.8; });
 }
 
 /* ---------- Fireplace: brick surround, mantel, crackling fire ---------- */
@@ -751,7 +749,7 @@ function buildFloorStuff() {
   pouf(1.35, 2.5, 0.27, 0.14, pbr("gingham_check", { repeat: [1.5, 1.5], color: 0xffffff, normal: 0.6 }));
   // basket with a blanket
   const basket = add(new THREE.CylinderGeometry(0.2, 0.17, 0.32, 28, 1, true), pbr("wool_boucle", { repeat: [3, 1.5], color: 0xc9a77c, normal: 2, side: THREE.DoubleSide }), 2.95, 0.16, 2.85);
-  add(surface(2.78, 3.12, 2.68, 3.02, 20, 20, (x, z) => 0.3 + 0.05 * fbm(x * 12, z * 12) + 0.04 * Math.exp(-((x - 2.95) ** 2 + (z - 2.85) ** 2) * 60)), pbr("knitted_fleece", { repeat: [1, 1], color: 0x9fb39a, normal: 2, side: THREE.DoubleSide }));
+  add(surface(2.78, 3.12, 2.68, 3.02, 20, 20, (x, z) => 0.3 + 0.05 * fbm(x * 12, z * 12) + 0.04 * Math.exp(-((x - 2.95) ** 2 + (z - 2.85) ** 2) * 60)), pbr("knitted_fleece", { repeat: [1, 1], color: new THREE.Color(1.9, 2.4, 1.9), normal: 1.6, side: THREE.DoubleSide }));
   void basket;
   // stack of books by the fire
   [0x8e3b46, 0x2f4a6d, 0xe1b45a, 0x6b8f71, 0xc77b5a].forEach((c, i) =>
@@ -764,7 +762,7 @@ function buildFloorStuff() {
 function buildBunk() {
   const oak = pbr("oak_veneer_01", { color: 0xf2dcc0, normal: 0.9, roughness: 0.85 });
   // four posts, floor to above the top rail
-  for (const x of [LEFT, RIGHT]) for (const z of [BACK, FRONT]) focusTargets.push(add(woodBox(0.07, Y0 + 0.4, 0.07), oak, x, (Y0 + 0.4) / 2, z));
+  for (const x of [LEFT, RIGHT]) for (const z of [BACK, FRONT]) focusTargets.push(caster(add(woodBox(0.07, Y0 + 0.4, 0.07), oak, x, (Y0 + 0.4) / 2, z)));
   for (const [yy, top] of [[YL, false], [Y0, true]]) {
     add(woodBox(RIGHT - LEFT, 0.15, 0.035), oak, 0, yy - 0.1, FRONT + 0.012);
     add(woodBox(RIGHT - LEFT, 0.15, 0.035), oak, 0, yy - 0.1, BACK - 0.012);
@@ -796,7 +794,9 @@ function buildBunk() {
   dents.push(
     { x: 0.42, z: 0.0, rx: 0.24, rz: 0.2, depth: 0.04 },     // cat
     { x: 0.1, z: -0.3, rx: 0.12, rz: 0.1, depth: 0.03 },     // teddy
-    { x: 0.8, z: 0.22, rx: 0.1, rz: 0.12, depth: 0.025 },    // bunny
+    { x: 0.6, z: 0.36, rx: 0.1, rz: 0.1, depth: 0.025 },     // bunny
+    { x: 0.7, z: 0.24, rx: 0.2, rz: 0.075, depth: -0.075 },  // your legs, crossed under the throw
+    { x: 0.66, z: 0.04, rx: 0.075, rz: 0.2, depth: -0.06 },
     { x: -0.25, z: 0.12, rx: 0.13, rz: 0.11, depth: 0.025 }, // teddy-fabric cushion
     { x: -0.72, z: 0.06, rx: 0.22, rz: 0.2, depth: 0.03 },   // scanned throw pillows
     { x: 0.2, z: 0.3, rx: 0.06, rz: 0.06, depth: 0.012 },   // rubber duck
@@ -815,13 +815,12 @@ function buildBunk() {
   addPillow(-0.25, Y0 + 0.07, 0.12, 0.34, 0.3, 0.12, -0.12, 0.6, "curly_teddy_natural", 0xffffff);
 
   // chunky knit throw crumpled at the foot
-  add(surface(0.5, 1.0, -0.38, 0.38, 60, 50, (x, z) => duvetH(x, z) + 0.016 + 0.05 * Math.max(0, fbm(x * 4, z * 4, 9.1)) + 0.03 * fbm(x * 9, z * 9, 2.2, 2),
-    (x, z, y) => y - 0.08 * THREE.MathUtils.smoothstep(0.62, 0.5, x)),
-    pbr("knitted_fleece", { repeat: [2.5, 2.5], color: 0xf3ead9, normal: 2.4, side: THREE.DoubleSide }));
+  add(surface(THROW.x0, THROW.x1, THROW.z0, THROW.z1, 70, 60, throwH),
+    pbr("knitted_fleece", { repeat: [2.5, 2.5], color: new THREE.Color(3.3, 3.05, 2.7), normal: 1.6, side: THREE.DoubleSide }));
 
   contactShadow(0.42, 0.0, 0.26, 0.22, 0.55);
   contactShadow(0.1, -0.3, 0.13, 0.11, 0.5);
-  contactShadow(0.8, 0.22, 0.12, 0.13, 0.45);
+  contactShadow(0.6, 0.36, 0.12, 0.12, 0.45);
 }
 
 // Soft darkening under things lying on the duvet, so they sink in visually too.
@@ -832,7 +831,7 @@ function contactShadow(x, z, rx, rz, strength) {
     gr.addColorStop(0, "rgba(0,0,0,1)"); gr.addColorStop(0.55, "rgba(0,0,0,.5)"); gr.addColorStop(1, "rgba(0,0,0,0)");
     g.fillStyle = gr; g.fillRect(0, 0, w, w);
   });
-  const g = surface(x - rx * 1.4, x + rx * 1.4, z - rz * 1.4, z + rz * 1.4, 16, 16, (px, pz) => duvetH(px, pz) + 0.003);
+  const g = surface(x - rx * 1.4, x + rx * 1.4, z - rz * 1.4, z + rz * 1.4, 24, 24, (px, pz) => topH(px, pz) + 0.004);
   const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ map: _shadowTex, transparent: true, opacity: strength, depthWrite: false }));
   m.renderOrder = 1; scene.add(m);
 }
@@ -930,7 +929,7 @@ function furry(geo, opts, layers, parent) {
     const m = furMaterial({ ...opts, layer: i / layers });
     furMats.push(m);
     const mesh = new THREE.Mesh(geo, m);
-    mesh.castShadow = i === 0; mesh.receiveShadow = true;
+    mesh.castShadow = false; mesh.receiveShadow = true;
     mesh.userData.shell = i;
     grp.add(mesh);
   }
@@ -1009,7 +1008,7 @@ function buildToys() {
     return d;
   };
   const bunny = new THREE.Group();
-  bunny.position.set(0.8, onBed(0.8, 0.22, 0.02), 0.22); bunny.rotation.set(0, -2.0, 0.1);
+  bunny.position.set(0.6, onBed(0.6, 0.36, 0.02), 0.36); bunny.rotation.set(0, -2.6, 0.1);
   scene.add(bunny);
   furry(sdfGeometry(bsdf, 0.3, 48), { color: 0xf3e8d8, length: 0.008, density: 1500, tabby: 0, breath: 0 }, 10, bunny);
   for (const s of [-1, 1]) add(new THREE.SphereGeometry(0.0055, 10, 8), eye, s * 0.026, 0.084, 0.138, 0, 0, 0, bunny);
@@ -1081,7 +1080,7 @@ async function loadModel(name, { x, y = 0, z, ry = 0, scale = 1, bed = false, si
   try {
     const root = (await gltfLoader.loadAsync(`models/${name}/${name}.gltf`)).scene;
     root.scale.setScalar(scale); root.rotation.y = ry;
-    root.traverse(o => { if (o.isMesh) { o.castShadow = o.receiveShadow = true; focusTargets.push(o); if (o.material.map) o.material.map.anisotropy = maxAniso; } });
+    root.traverse(o => { if (o.isMesh) { o.receiveShadow = true; o.castShadow = scale > 0.6; focusTargets.push(o); if (o.material.map) o.material.map.anisotropy = maxAniso; } });
     root.updateMatrixWorld(true);
     const box = new THREE.Box3().setFromObject(root);
     root.position.set(x - (box.min.x + box.max.x) / 2, (bed ? onBed(x, z, sink) : y) - box.min.y, z - (box.min.z + box.max.z) / 2);
@@ -1402,7 +1401,7 @@ function buildComposer() {
 /* =========================================================
    Camera: standing on the ladder. Drag empty space to look around.
    ========================================================= */
-const EYE = new THREE.Vector3(0.68, 2.06, 0.92);
+const EYE = new THREE.Vector3(0.8, 2.14, 0.16);   // sitting on the top bunk, at the foot end
 const look = { yaw: 0, pitch: 0, vy: 0, vp: 0, home: { yaw: 0, pitch: 0 } };
 const camPos = new THREE.Vector3(), camTarget = new THREE.Vector3();
 let tween = null;
@@ -1590,9 +1589,9 @@ canvas.addEventListener("pointermove", e => {
   if (lookDrag) {
     const k = (camera.fov * Math.PI / 180) / innerHeight;
     const dx = (e.clientX - lookDrag.lx) * k, dy = (e.clientY - lookDrag.ly) * k;
-    look.yaw = THREE.MathUtils.clamp(look.yaw + dx, -1.1, 2.4);
+    look.yaw = THREE.MathUtils.clamp(look.yaw - dx, -1.1, 2.4);   // the room follows your finger
     look.pitch = THREE.MathUtils.clamp(look.pitch + dy, -1.3, 0.55);
-    look.vy = dx; look.vp = dy;
+    look.vy = -dx; look.vp = dy;
     lookDrag.lx = e.clientX; lookDrag.ly = e.clientY;
     return;
   }
@@ -1625,6 +1624,8 @@ window.__screen = () => {
   return { polaroid: toPx(polaroidCenter()), wire: toPx(new THREE.Vector3(P[w].x, P[w].y, P[w].z)) };
 };
 window.__look = (yaw, pitch) => { look.yaw = yaw; look.pitch = pitch; };
+window.__scene = scene;
+window.__ray = (x, y) => { raycaster.setFromCamera(new THREE.Vector2(x, y), camera); return raycaster.intersectObjects(scene.children, true).filter(h => h.object.isMesh); };
 window.__info = () => ({ tris: renderer.info.render.triangles, calls: renderer.info.render.calls, quality });
 
 /* =========================================================
@@ -1636,7 +1637,7 @@ function resize() {
   camera.aspect = w / h;
   camera.fov = w / h < 1 ? 66 : 50;
   camera.updateProjectionMatrix();
-  if (!renderer) return;
+  if (!renderer || !composer) return;
   renderer.setPixelRatio(pixelRatio); renderer.setSize(w, h, false);
   composer.setPixelRatio(pixelRatio); composer.setSize(w, h);
 }
@@ -1678,7 +1679,7 @@ function frame(now) {
     camTarget.lerpVectors(tween.fromT, tween.toT, e);
     if (k >= 1) { const d = tween.done; tween = null; d && d(); }
   } else if (view === "home") {
-    camPos.copy(EYE);
+    camPos.copy(EYE); camPos.y += Math.sin(simT * 1.4) * 0.0025;
     camTarget.copy(EYE).add(dirOf(look.yaw + Math.sin(simT * 0.21) * 0.008, look.pitch + Math.sin(simT * 0.29) * 0.005));
   }
   camera.position.copy(camPos);
@@ -1708,7 +1709,7 @@ function frame(now) {
 (async () => {
   if (renderer) {
     renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.VSMShadowMap;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.05;
     try { await Promise.all(["54px 'Great Vibes'", "150px 'Great Vibes'", "80px 'Bebas Neue'", "60px Pacifico"].map(f => document.fonts.load(f))); } catch {}
