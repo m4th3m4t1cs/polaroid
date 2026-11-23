@@ -44,10 +44,9 @@
   <div class="status" id="status"></div>
 
 <script>
-// ---- Fill these in from Supabase: Project Settings → API ----
-const SUPABASE_URL = "https://YOUR-PROJECT.supabase.co";
-const SUPABASE_KEY = "YOUR-ANON-KEY";
-// -------------------------------------------------------------
+// Photos are stored in this repo, on the "photos" branch.
+const REPO = "m4th3m4t1cs/polaroid";
+const BRANCH = "photos";
 // The two of you. Rename freely (lowercase, no spaces).
 const PEOPLE = ["me", "friend"];
 
@@ -62,21 +61,40 @@ if (!PEOPLE.includes(ME)) {
   throw new Error("pick who you are");
 }
 const THEM = PEOPLE.find(p => p !== ME);
-// You see the photo sent to you; Send replaces the photo for them.
-const FILE_URL = `${SUPABASE_URL}/storage/v1/object/photos/to-${THEM}.jpg`;
-const PUBLIC_URL = `${SUPABASE_URL}/storage/v1/object/public/photos/to-${ME}.jpg`;
+
+// GitHub token: pasted once per phone, kept only on that phone (never in the repo).
+function token() {
+  let t = "";
+  try { t = localStorage.getItem("gh_token") || ""; } catch {}
+  if (!t) {
+    t = (prompt("Paste the GitHub access token (one time only):") || "").trim();
+    try { if (t) localStorage.setItem("gh_token", t); } catch {}
+  }
+  return t;
+}
+function forgetToken() { try { localStorage.removeItem("gh_token"); } catch {} }
+
+const api = path => `https://api.github.com/repos/${REPO}/contents/${path}?ref=${BRANCH}`;
+const headers = extra => ({ Authorization: `Bearer ${token()}`, "X-GitHub-Api-Version": "2022-11-28", ...extra });
+
 let pending = null; // resized photo waiting to be sent
+let shownUrl = null;
 
-function show(src) { $("photo").style.backgroundImage = `url("${src}")`; $("photo").textContent = ""; }
+function show(src) {
+  if (shownUrl && shownUrl !== src) URL.revokeObjectURL(shownUrl);
+  shownUrl = src;
+  $("photo").style.backgroundImage = `url("${src}")`; $("photo").textContent = "";
+}
 
-// Show the latest shared photo; refresh every 30s unless previewing a new one.
-function loadLatest() {
+// Show the photo sent to me; refresh every 30s unless previewing a new one.
+async function loadLatest() {
   if (pending) return;
-  const url = `${PUBLIC_URL}?t=${Date.now()}`;
-  const img = new Image();
-  img.onload = () => show(url);
-  img.onerror = () => { $("photo").textContent = "no photo yet"; };
-  img.src = url;
+  const res = await fetch(api(`to-${ME}.jpg`), { cache: "no-store",
+    headers: headers({ Accept: "application/vnd.github.raw" }) }).catch(() => null);
+  if (pending) return;
+  if (res && res.ok) show(URL.createObjectURL(await res.blob()));
+  else if (res && res.status === 401) { forgetToken(); $("photo").textContent = "token not accepted, reload to try again"; }
+  else if (res && res.status === 404) $("photo").textContent = "no photo yet";
 }
 loadLatest();
 setInterval(loadLatest, 30000);
@@ -102,18 +120,27 @@ $("cancel").onclick = () => { pending = null; setMode(false); $("status").textCo
 
 $("send").onclick = async () => {
   $("send").disabled = true; $("status").textContent = "Sending…";
-  const res = await fetch(FILE_URL, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${SUPABASE_KEY}`, apikey: SUPABASE_KEY,
-               "Content-Type": "image/jpeg", "x-upsert": "true", "cache-control": "max-age=0" },
-    body: pending,
-  }).catch(() => null);
-  $("send").disabled = false;
-  if (res && res.ok) {
+  try {
+    const path = `to-${THEM}.jpg`;
+    // Replacing a file needs its current id (sha), if it exists.
+    const cur = await fetch(api(path), { cache: "no-store", headers: headers() });
+    const sha = cur.ok ? (await cur.json()).sha : undefined;
+    const content = await new Promise(r => {
+      const fr = new FileReader(); fr.onload = () => r(fr.result.split(",")[1]); fr.readAsDataURL(pending);
+    });
+    const res = await fetch(`https://api.github.com/repos/${REPO}/contents/${path}`, {
+      method: "PUT", headers: headers({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ message: `photo for ${THEM}`, content, sha, branch: BRANCH }),
+    });
+    if (!res.ok) {
+      if (res.status === 401) forgetToken();
+      throw new Error(`${res.status} ${(await res.json().catch(() => ({}))).message || ""}`);
+    }
     pending = null; setMode(false); $("status").textContent = `Sent to ${THEM} ✓`; loadLatest();
-  } else {
-    $("status").textContent = "Send failed: " + (res ? await res.text() : "no connection");
+  } catch (err) {
+    $("status").textContent = "Send failed: " + err.message;
   }
+  $("send").disabled = false;
 };
 
 function setMode(previewing) {
