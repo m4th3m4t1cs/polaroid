@@ -2183,6 +2183,7 @@ animators.push((t, dt) => {
   }
 });
 window.__climb = () => climb();
+window.__pc = () => polaroidCenter().toArray();
 window.__punch = i => { pillows[i].userData.punch.v -= 7; };
 
 window.__screen = () => {
