@@ -2,83 +2,170 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Polaroid">
+<meta name="theme-color" content="#1b1411">
 <link rel="apple-touch-icon" href="icon.png">
 <title>Polaroid</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&display=swap" rel="stylesheet">
 <style>
-  * { box-sizing: border-box; margin: 0; }
-  body {
-    min-height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 28px; padding: 24px; background: #2b2724; font-family: -apple-system, system-ui, sans-serif; color: #f4efe8;
+  :root {
+    --night: #1b1411;
+    --paper: #f8f4ec;
+    --ink: #3a302a;
+    --muted: #8f857b;
+    --warm: #ffcf8a;
   }
-  .polaroid {
-    width: min(82vw, 420px); background: #fbf9f5; padding: 14px 14px 64px;
-    box-shadow: 0 12px 30px rgba(0,0,0,.45); transform: rotate(-1.5deg);
+  * { box-sizing: border-box; margin: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow: hidden; background: var(--night); }
+  body { font-family: "Caveat", cursive; color: var(--paper); touch-action: manipulation; }
+  #scene { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+
+  .taphint {
+    position: fixed; left: 0; right: 0; bottom: calc(28px + env(safe-area-inset-bottom));
+    text-align: center; font-size: 22px; color: var(--warm); opacity: .85; pointer-events: none;
+    text-shadow: 0 0 12px rgba(255,190,110,.6); transition: opacity .4s;
   }
+  .taphint.gone { opacity: 0; }
+
+  /* The polaroid, opened big */
+  .overlay {
+    position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 18px; padding: 24px 16px calc(24px + env(safe-area-inset-bottom));
+    background: radial-gradient(ellipse at center, rgba(20,12,8,.35), rgba(20,12,8,.8));
+    -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
+    opacity: 0; pointer-events: none; transition: opacity .45s ease;
+  }
+  .overlay.open { opacity: 1; pointer-events: auto; }
+  .big {
+    width: min(84vw, 400px, 52dvh); background: var(--paper); padding: 16px 16px 0;
+    box-shadow: 0 18px 40px rgba(0,0,0,.55), 0 2px 0 rgba(0,0,0,.08);
+    transform: scale(.55) rotate(-4deg); transition: transform .55s cubic-bezier(.2,.8,.2,1.05);
+    position: relative;
+  }
+  .overlay.open .big { transform: scale(1) rotate(-1.2deg); }
   .photo {
-    aspect-ratio: 1; background: #1c1a19 center/cover no-repeat;
-    display: flex; align-items: center; justify-content: center; color: #6d6660; font-size: 14px;
+    aspect-ratio: 1; background: #2e2b26 center/cover no-repeat; position: relative; overflow: hidden;
   }
-  .buttons { display: flex; gap: 12px; }
-  button, label.btn {
-    font: inherit; font-size: 17px; padding: 12px 22px; border-radius: 999px; border: 0; cursor: pointer;
-    background: #f4efe8; color: #2b2724;
+  /* Empty / undeveloped film look */
+  .photo.cloudy {
+    background-image:
+      radial-gradient(circle at 30% 35%, rgba(255,255,255,.22), transparent 45%),
+      radial-gradient(circle at 70% 65%, rgba(255,255,255,.16), transparent 50%),
+      radial-gradient(circle at 55% 20%, rgba(220,210,190,.18), transparent 40%),
+      linear-gradient(160deg, #7d8580, #a3a89e 55%, #858b84);
   }
-  button.primary { background: #e8553e; color: #fff; }
-  button:disabled { opacity: .5; }
-  .status { font-size: 14px; min-height: 1.2em; color: #c9c0b6; }
+  .photo.developing { animation: develop 2.8s ease-out both; }
+  @keyframes develop {
+    0%   { filter: blur(14px) brightness(1.6) saturate(.2) sepia(.4); }
+    60%  { filter: blur(3px) brightness(1.15) saturate(.7) sepia(.15); }
+    100% { filter: none; }
+  }
+  .photo .empty {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    font-size: 26px; color: rgba(255,255,255,.55); text-align: center; padding: 16px;
+  }
+  .caption {
+    height: 64px; display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    color: var(--ink); font-size: 24px; padding: 0 4px; white-space: nowrap;
+  }
+  .caption .left { font-size: 17px; color: var(--muted); }
+  .close {
+    position: absolute; top: calc(14px + env(safe-area-inset-top)); right: 16px;
+    background: rgba(248,244,236,.12); color: var(--paper); border: 0; border-radius: 50%;
+    width: 40px; height: 40px; font-size: 20px; cursor: pointer;
+  }
+  .buttons { display: flex; gap: 12px; min-height: 48px; }
+  .btn {
+    font: 700 24px "Caveat", cursive; padding: 6px 24px 8px; border-radius: 999px; border: 0; cursor: pointer;
+    background: var(--paper); color: var(--ink); box-shadow: 0 6px 16px rgba(0,0,0,.35);
+  }
+  .btn.primary { background: #e8735a; color: #fff; }
+  .btn:disabled { opacity: .5; }
+  .btn[hidden] { display: none; }
   input[type=file] { display: none; }
+  .status { font-size: 20px; min-height: 1.2em; color: var(--warm); text-align: center; }
+  .invite {
+    background: none; border: 0; font: 18px "Caveat", cursive; color: var(--muted);
+    text-decoration: underline; cursor: pointer; padding: 4px;
+  }
+
   .hint {
-    position: fixed; left: 12px; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom));
-    background: #fbf9f5; color: #2b2724; border-radius: 14px; padding: 14px 40px 14px 16px;
-    font-size: 15px; line-height: 1.4; box-shadow: 0 8px 24px rgba(0,0,0,.4);
+    position: fixed; left: 12px; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom)); z-index: 5;
+    background: var(--paper); color: var(--ink); border-radius: 14px; padding: 12px 44px 12px 16px;
+    font: 15px/1.4 -apple-system, system-ui, sans-serif; box-shadow: 0 8px 24px rgba(0,0,0,.4);
   }
   .hint b { white-space: nowrap; }
-  .hint button { position: absolute; top: 6px; right: 6px; background: none; padding: 6px 10px; font-size: 18px; color: #8f857b; }
-  button.invite { font-size: 13px; color: #8f857b; background: none; padding: 4px; text-decoration: underline; }
+  .hint button { position: absolute; top: 6px; right: 6px; background: none; border: 0; padding: 6px 10px; font-size: 18px; color: var(--muted); }
+
+  .who { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; font-size: 30px; }
 </style>
+<script type="importmap">
+{ "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
 </head>
 <body>
-  <div class="polaroid"><div class="photo" id="photo">loading…</div></div>
+  <canvas id="scene"></canvas>
+  <div class="taphint gone" id="taphint">tap the polaroid</div>
 
-  <div class="buttons">
-    <label class="btn" id="pick">Choose photo<input type="file" id="file" accept="image/*"></label>
-    <button class="primary" id="send" hidden>Send</button>
-    <button id="cancel" hidden>Cancel</button>
+  <div class="overlay" id="overlay">
+    <button class="close" id="close" aria-label="Close">✕</button>
+    <div class="big">
+      <div class="photo cloudy" id="photo"></div>
+      <div class="caption"><span id="capMain"></span><span class="left" id="capLeft"></span></div>
+    </div>
+    <div class="buttons">
+      <label class="btn" id="pick"><span id="pickText">send a photo</span><input type="file" id="file" accept="image/*"></label>
+      <button class="btn primary" id="send" hidden>send</button>
+      <button class="btn" id="cancel" hidden>cancel</button>
+    </div>
+    <div class="status" id="status"></div>
+    <button class="invite" id="invite"></button>
   </div>
-  <div class="status" id="status"></div>
-  <button class="invite" id="invite"></button>
+
   <div class="hint" id="hint" hidden>
-    Keep this on your home screen: tap <b>Share ⬆︎</b>, then <b>Add to Home Screen</b>.
+    Keep this on your home screen: tap <b>⋯</b> then <b>Share</b>, then <b>Add to Home Screen</b>.
     <button id="hideHint" aria-label="Close">✕</button>
   </div>
 
-<script>
-// Photos are stored in this repo, on the "photos" branch.
-const REPO = "m4th3m4t1cs/polaroid";
-const BRANCH = "photos";
-// The two of you. Rename freely (lowercase, no spaces).
-const PEOPLE = ["me", "friend"];
+<script type="module">
+import * as THREE from "three";
+import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
+
+/* =========================================================
+   Settings
+   ========================================================= */
+const REPO = "m4th3m4t1cs/polaroid";   // photos live in this repo…
+const BRANCH = "photos";               // …on this branch
+const PEOPLE = ["me", "friend"];       // the two of you (lowercase, no spaces)
+const LIFETIME = 24 * 60 * 60 * 1000;  // photos expire after 24 hours
+const POLL = 30000;
 
 const $ = id => document.getElementById(id);
 
-// Who's looking comes from the address: ?me=me or ?me=friend.
-// Add to Home Screen from that address and it's remembered.
+/* =========================================================
+   Who is looking (?me=…)
+   ========================================================= */
 const ME = new URLSearchParams(location.search).get("me");
 if (!PEOPLE.includes(ME)) {
-  document.body.innerHTML = `<div class="status">Who are you?</div><div class="buttons">${
-    PEOPLE.map(p => `<button onclick="location.search='?me=${p}'">${p}</button>`).join("")}</div>`;
+  document.body.innerHTML = `<div class="who">who are you?<div class="buttons">${
+    PEOPLE.map(p => `<button class="btn" onclick="location.search='?me=${p}'">${p}</button>`).join("")}</div></div>`;
   throw new Error("pick who you are");
 }
 const THEM = PEOPLE.find(p => p !== ME);
 
-// GitHub token: pasted once per phone, kept only on that phone (never in the repo).
-// A link with &t=<token> carries it, so the receiver doesn't need to paste anything.
+/* =========================================================
+   GitHub storage
+   ========================================================= */
 function token() {
-  let t = (new URLSearchParams(location.search).get("t") || new URLSearchParams(location.hash.slice(1)).get("t") || "").trim();
+  let t = (new URLSearchParams(location.search).get("t") || "").trim();
   if (t) { try { localStorage.setItem("gh_token", t); } catch {} return t; }
   try { t = localStorage.getItem("gh_token") || ""; } catch {}
   if (!t) {
@@ -87,44 +174,403 @@ function token() {
   }
   return t;
 }
-// Drop a rejected token from storage and from the address, so the next try asks again.
 function forgetToken() {
   try { localStorage.removeItem("gh_token"); } catch {}
   const q = new URLSearchParams(location.search); q.delete("t");
   history.replaceState(null, "", `${location.pathname}?${q}`);
 }
+const gh = (path, opts = {}) => fetch(`https://api.github.com/repos/${REPO}/${path}`, {
+  cache: "no-store", ...opts,
+  headers: { Authorization: `Bearer ${token()}`, "X-GitHub-Api-Version": "2022-11-28", ...(opts.headers || {}) },
+});
 
-const api = path => `https://api.github.com/repos/${REPO}/contents/${path}?ref=${BRANCH}`;
-const headers = extra => ({ Authorization: `Bearer ${token()}`, "X-GitHub-Api-Version": "2022-11-28", ...extra });
+let received = null;   // { sha, url, img, date, fresh } — the photo sent to me
+let tokenBad = false;
 
-let pending = null; // resized photo waiting to be sent
-let shownUrl = null;
-
-function show(src) {
-  if (shownUrl && shownUrl !== src) URL.revokeObjectURL(shownUrl);
-  shownUrl = src;
-  $("photo").style.backgroundImage = `url("${src}")`; $("photo").textContent = "";
-}
-
-// Show the photo sent to me; refresh every 30s unless previewing a new one.
-async function loadLatest() {
-  if (pending) return;
-  const res = await fetch(api(`to-${ME}.jpg`), { cache: "no-store",
-    headers: headers({ Accept: "application/vnd.github.raw" }) }).catch(() => null);
-  if (pending) return;
-  if (res && res.ok) show(URL.createObjectURL(await res.blob()));
-  else if (res && res.status === 401) {
-    forgetToken();
-    $("photo").textContent = "GitHub didn't accept the token. Tap here to paste it again.";
-    $("photo").onclick = () => { $("photo").onclick = null; loadLatest(); };
+// Fetch the photo sent to me. Returns true if what should be shown changed.
+async function refresh() {
+  const path = `to-${ME}.jpg`;
+  const res = await gh(`contents/${path}?ref=${BRANCH}`).catch(() => null);
+  if (!res) return false;
+  if (res.status === 401) { tokenBad = true; forgetToken(); return false; }
+  tokenBad = false;
+  if (res.status === 404) { const had = !!received; received = null; return had; }
+  if (!res.ok) return false;
+  const file = await res.json();
+  if (received && received.sha === file.sha) {
+    if (Date.now() - received.date > LIFETIME) { expire(file.sha); received = null; return true; }
+    return false;
   }
-  else if (res && res.status === 404) $("photo").textContent = "no photo yet";
-}
-loadLatest();
-setInterval(loadLatest, 30000);
-document.addEventListener("visibilitychange", () => { if (!document.hidden) loadLatest(); });
+  // When was it sent? (the last commit that touched it)
+  const cres = await gh(`commits?path=${path}&sha=${BRANCH}&per_page=1`).catch(() => null);
+  const commits = cres && cres.ok ? await cres.json() : [];
+  const date = commits[0] ? Date.parse(commits[0].commit.committer.date) : Date.now();
+  if (Date.now() - date > LIFETIME) { expire(file.sha); const had = !!received; received = null; return had; }
 
-// Pick → shrink to 1200px JPEG → preview.
+  const bytes = Uint8Array.from(atob(file.content.replace(/\n/g, "")), c => c.charCodeAt(0));
+  const blob = new Blob([bytes], { type: "image/jpeg" });
+  if (received) URL.revokeObjectURL(received.url);
+  const url = URL.createObjectURL(blob);
+  const img = await loadImage(url);
+  received = { sha: file.sha, url, img, date, fresh: true };
+  return true;
+}
+
+// Delete an expired photo (best effort; whoever sees it first cleans up).
+function expire(sha) {
+  gh(`contents/to-${ME}.jpg`, {
+    method: "DELETE", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message: "expired", sha, branch: BRANCH }),
+  }).catch(() => {});
+}
+
+async function sendPhoto(blob) {
+  const path = `to-${THEM}.jpg`;
+  const cur = await gh(`contents/${path}?ref=${BRANCH}`);
+  if (cur.status === 401) { forgetToken(); throw new Error("GitHub didn't accept the token"); }
+  const sha = cur.ok ? (await cur.json()).sha : undefined;
+  const content = await new Promise(r => {
+    const fr = new FileReader(); fr.onload = () => r(fr.result.split(",")[1]); fr.readAsDataURL(blob);
+  });
+  const res = await gh(`contents/${path}`, {
+    method: "PUT", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message: `photo for ${THEM}`, content, sha, branch: BRANCH }),
+  });
+  if (!res.ok) throw new Error(`${res.status} ${(await res.json().catch(() => ({}))).message || ""}`);
+}
+
+const loadImage = src => new Promise((ok, fail) => { const i = new Image(); i.onload = () => ok(i); i.onerror = fail; i.src = src; });
+
+/* =========================================================
+   3D bunk bed
+   ========================================================= */
+const canvas = $("scene");
+let renderer = null;
+try { renderer = new THREE.WebGLRenderer({ canvas, antialias: true }); } catch {}
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(50, 1, 0.05, 30);
+let hitMesh, polaroidTex, polaroidGroup, photoGlow;
+const bulbs = [];
+const twinkleLights = [];
+
+// Seeded randomness so the mess looks the same every visit.
+let seed = 11;
+const rand = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
+
+function canvasTex(w, h, draw, repeat) {
+  const c = document.createElement("canvas"); c.width = w; c.height = h;
+  draw(c.getContext("2d"), w, h);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  if (repeat) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(...repeat); }
+  t.anisotropy = 4;
+  return t;
+}
+const woodTex = (base, dark, rep) => canvasTex(256, 256, (g, w, h) => {
+  g.fillStyle = base; g.fillRect(0, 0, w, h);
+  for (let i = 0; i < 70; i++) {
+    g.strokeStyle = dark; g.globalAlpha = 0.08 + rand() * 0.18; g.lineWidth = 0.5 + rand() * 2.5;
+    const y = rand() * h; g.beginPath(); g.moveTo(0, y);
+    for (let x = 0; x <= w; x += 16) g.lineTo(x, y + Math.sin(x * 0.03 + i) * 3);
+    g.stroke();
+  }
+  g.globalAlpha = 1;
+}, rep);
+const knitTex = (base, rep = [4, 4]) => canvasTex(128, 128, (g, w, h) => {
+  g.fillStyle = base; g.fillRect(0, 0, w, h);
+  for (let y = 0; y < h; y += 8) for (let x = 0; x < w; x += 8) {
+    g.fillStyle = `rgba(0,0,0,${0.04 + rand() * 0.05})`; g.beginPath(); g.ellipse(x + 4, y + 4, 2.5, 3.6, 0, 0, Math.PI * 2); g.fill();
+  }
+}, rep);
+
+const mat = (o) => new THREE.MeshStandardMaterial({ roughness: 0.85, metalness: 0, ...o });
+function add(geo, material, x, y, z, rx = 0, ry = 0, rz = 0, parent = scene) {
+  const m = new THREE.Mesh(geo, material);
+  m.position.set(x, y, z); m.rotation.set(rx, ry, rz);
+  m.castShadow = m.receiveShadow = true;
+  parent.add(m); return m;
+}
+const box = (w, h, d) => new THREE.BoxGeometry(w, h, d);
+const rbox = (w, h, d, r, s = 4) => new RoundedBoxGeometry(w, h, d, s, r);
+
+// Bed dimensions (meters). Bed runs along x, against the wall at the back (−z).
+const BACK = -0.46, FRONT = 0.5, LEFT = -1.0, RIGHT = 1.0;
+const LOW = 0.32, HIGH = 1.32;            // frame heights
+const MATTRESS_TOP = LOW + 0.2;
+const MIDZ = (FRONT + BACK) / 2;
+
+function buildScene() {
+  scene.background = new THREE.Color(0x1b1411);
+  scene.fog = new THREE.Fog(0x1b1411, 3.2, 7.5);
+
+  const wallTex = canvasTex(256, 256, (g, w, h) => {
+    g.fillStyle = "#5b4538"; g.fillRect(0, 0, w, h);
+    for (let i = 0; i < 4000; i++) { g.fillStyle = `rgba(${rand() < .5 ? "0,0,0" : "255,240,220"},${rand() * .05})`; g.fillRect(rand() * w, rand() * h, 2, 2); }
+  }, [4, 2]);
+  const plaidTex = canvasTex(256, 256, (g, w, h) => {
+    g.fillStyle = "#c98f86"; g.fillRect(0, 0, w, h);
+    const band = (c, a, horiz, pos, size) => { g.fillStyle = c; g.globalAlpha = a; horiz ? g.fillRect(0, pos, w, size) : g.fillRect(pos, 0, size, h); };
+    for (const horiz of [true, false]) {
+      band("#a8645f", .55, horiz, 30, 60); band("#f2dccd", .55, horiz, 120, 10);
+      band("#7e4a4d", .45, horiz, 170, 34); band("#f2dccd", .4, horiz, 230, 5);
+    }
+    g.globalAlpha = 1;
+    for (let i = 0; i < 3000; i++) { g.fillStyle = `rgba(255,255,255,${rand() * .06})`; g.fillRect(rand() * w, rand() * h, 1.5, 1.5); }
+  }, [3, 3]);
+
+  // Room
+  add(new THREE.PlaneGeometry(8, 6), mat({ map: woodTex("#5a3d2b", "#2a1a10", [3, 6]), roughness: 0.7 }), 0, 0, 1.5, -Math.PI / 2);
+  add(new THREE.PlaneGeometry(8, 4), mat({ map: wallTex }), 0, 2, BACK - 0.04);
+  add(new THREE.PlaneGeometry(6, 4), mat({ map: wallTex, color: 0xb59a88 }), LEFT - 0.6, 2, 1, 0, Math.PI / 2);
+  add(new THREE.CircleGeometry(0.7, 48), mat({ map: knitTex("#8f7a66") }), 0.5, 0.004, 1.35, -Math.PI / 2);
+
+  // Bed frame
+  const wood = mat({ map: woodTex("#b98a5e", "#5e3b22", [1, 1]), roughness: 0.6 });
+  for (const x of [LEFT, RIGHT]) for (const z of [BACK, FRONT]) add(box(0.07, 1.78, 0.07), wood, x, 0.89, z);
+  for (const y of [LOW, HIGH]) {
+    add(box(RIGHT - LEFT + 0.07, 0.14, 0.04), wood, 0, y, FRONT);
+    add(box(RIGHT - LEFT + 0.07, 0.14, 0.04), wood, 0, y, BACK);
+    for (const x of [LEFT, RIGHT]) add(box(0.04, 0.14, FRONT - BACK), wood, x, y, MIDZ);
+  }
+  for (const x of [LEFT, RIGHT]) for (const y of [0.62, 0.8]) add(box(0.035, 0.06, FRONT - BACK), wood, x, y, MIDZ);
+  // Top bunk: slats seen from below, then its mattress and rail
+  for (let i = 0; i < 11; i++) add(box(0.09, 0.02, FRONT - BACK - 0.04), wood, LEFT + 0.1 + i * 0.18, HIGH - 0.05, MIDZ);
+  add(rbox(1.96, 0.16, 0.92, 0.05, 3), mat({ color: 0xece4d6 }), 0, HIGH + 0.04, MIDZ);
+  add(box(1.3, 0.06, 0.035), wood, -0.3, HIGH + 0.3, FRONT);
+  for (const x of [-0.9, 0.3]) add(box(0.04, 0.3, 0.035), wood, x, HIGH + 0.15, FRONT);
+  // Ladder on the left
+  for (const x of [-0.94, -0.66]) add(box(0.045, 1.75, 0.045), wood, x, 0.875, FRONT + 0.06);
+  for (const y of [0.2, 0.55, 0.9, 1.25, 1.6]) add(box(0.3, 0.035, 0.05), wood, -0.8, y, FRONT + 0.06);
+
+  // Lower mattress + rumpled blanket
+  add(rbox(1.96, 0.2, 0.92, 0.06), mat({ color: 0xf1ebe0 }), 0, LOW + 0.1, MIDZ);
+  add(makeBlanket(), new THREE.MeshStandardMaterial({ map: plaidTex, roughness: 1, side: THREE.DoubleSide }), 0, 0, 0);
+
+  // Pillows
+  add(rbox(0.55, 0.13, 0.34, 0.06, 5), mat({ color: 0xf4ece0, map: knitTex("#ffffff") }), -0.68, MATTRESS_TOP + 0.07, -0.22, 0.25, 0.15, 0.06);
+  add(rbox(0.5, 0.12, 0.32, 0.06, 5), mat({ color: 0xd8b4a6, map: knitTex("#ffffff") }), -0.62, MATTRESS_TOP + 0.13, -0.05, -0.35, -0.3, -0.1);
+
+  // Little bear plushie
+  const fur = mat({ color: 0xa87a55, roughness: 1 });
+  const bear = new THREE.Group(); bear.position.set(-0.33, MATTRESS_TOP + 0.08, -0.3); bear.rotation.set(0, 0.6, 0.15); scene.add(bear);
+  add(new THREE.SphereGeometry(0.075, 24, 16), fur, 0, 0, 0, 0, 0, 0, bear);
+  add(new THREE.SphereGeometry(0.055, 24, 16), fur, 0, 0.11, 0.01, 0, 0, 0, bear);
+  for (const s of [-1, 1]) add(new THREE.SphereGeometry(0.022, 12, 8), fur, s * 0.042, 0.155, 0, 0, 0, 0, bear);
+  add(new THREE.SphereGeometry(0.02, 12, 8), mat({ color: 0xe8d2b8 }), 0, 0.1, 0.055, 0, 0, 0, bear);
+
+  // Mess: hoodie at the foot, a book, things on the floor
+  add(rbox(0.42, 0.08, 0.3, 0.04), mat({ color: 0x8a9a7b, map: knitTex("#ffffff") }), 0.78, MATTRESS_TOP + 0.08, -0.2, 0.1, 0.5, 0.12);
+  add(rbox(0.3, 0.06, 0.22, 0.03, 3), mat({ color: 0x8a9a7b }), 0.62, MATTRESS_TOP + 0.13, -0.1, -0.2, 1.1, 0.2);
+  add(box(0.17, 0.03, 0.23), mat({ color: 0x3f5a73 }), 0.48, MATTRESS_TOP + 0.06, 0.28, 0.04, 0.7, 0.03);
+  [0xb5523b, 0xe0c27a, 0x4f6b5a, 0x7b5aa0].forEach((c, i) =>
+    add(box(0.26 - i * 0.02, 0.045, 0.19), mat({ color: c }), 1.38, 0.024 + i * 0.046, 0.78, 0, 0.2 + i * 0.25, 0));
+  add(new THREE.CylinderGeometry(0.045, 0.04, 0.1, 24), mat({ color: 0xe9e0d2, roughness: 0.4 }), 1.62, 0.05, 1.0);
+  add(rbox(0.22, 0.03, 0.09, 0.015, 3), mat({ color: 0xf2f0ea, map: knitTex("#ffffff") }), 0.3, 0.016, 0.95, 0, 0.9, 0);
+
+  // Fairy lights: one under the top bunk at the front, one along the wall inside
+  fairyString([[LEFT, HIGH - 0.08, FRONT + 0.03], [-0.55, HIGH - 0.27, FRONT + 0.05], [-0.05, HIGH - 0.1, FRONT + 0.04],
+               [0.45, HIGH - 0.3, FRONT + 0.06], [RIGHT, HIGH - 0.08, FRONT + 0.03]], 26, 2);
+  fairyString([[LEFT + 0.05, HIGH - 0.12, BACK + 0.03], [-0.4, HIGH - 0.32, BACK + 0.03], [0.2, HIGH - 0.16, BACK + 0.03],
+               [0.7, HIGH - 0.36, BACK + 0.03], [RIGHT - 0.05, HIGH - 0.14, BACK + 0.03]], 22, 2);
+
+  // Lighting: dim warm room, the fairy lights do the rest
+  scene.add(new THREE.HemisphereLight(0xb9a7c9, 0x2a1a12, 0.32));
+  const lamp = new THREE.DirectionalLight(0x9db2d8, 0.55);
+  lamp.position.set(2.5, 3, 3); lamp.castShadow = true;
+  lamp.shadow.mapSize.set(1024, 1024);
+  Object.assign(lamp.shadow.camera, { left: -2, right: 2, top: 2, bottom: -1, near: 1, far: 10 });
+  lamp.shadow.bias = -0.0005; lamp.shadow.radius = 4;
+  scene.add(lamp);
+
+  buildPolaroid();
+}
+
+function makeBlanket() {
+  const geo = new THREE.PlaneGeometry(1, 1, 60, 44);
+  const p = geo.attributes.position;
+  const x0 = -0.42, x1 = 1.3, z0 = BACK + 0.03, z1 = FRONT + 0.36;
+  const top = MATTRESS_TOP + 0.045, edgeZ = FRONT - 0.02, edgeX = RIGHT - 0.02;
+  for (let i = 0; i < p.count; i++) {
+    const u = p.getX(i) + 0.5, v = p.getY(i) + 0.5;
+    let x = x0 + u * (x1 - x0), z = z0 + (1 - v) * (z1 - z0);
+    let y = top
+      + 0.012 * Math.sin(x * 23 + z * 7) + 0.009 * Math.sin(z * 31 - x * 11) + 0.011 * Math.sin(x * 9 + z * 17 + 1.3)
+      + 0.08 * Math.exp(-((x - 0.66) ** 2 / 0.02 + (z + 0.12) ** 2 / 0.06))   // big rumple
+      + 0.05 * Math.exp(-((x + 0.2) ** 2 / 0.03 + (z - 0.28) ** 2 / 0.012))  // fold
+      + (u < 0.04 ? 0.015 : 0);                                              // turned-down edge
+    if (z > edgeZ) { const o = z - edgeZ; z = edgeZ + 0.07 + o * 0.05 + 0.012 * Math.sin(x * 26); y -= o * 1.02; }
+    if (x > edgeX) { const o = x - edgeX; x = edgeX + 0.06 + o * 0.05 + 0.01 * Math.sin(z * 30); y -= o * 1.02; }
+    p.setXYZ(i, x, Math.max(y, 0.12), z);
+  }
+  geo.computeVertexNormals();
+  return geo;
+}
+
+let glowTex;
+function fairyString(points, count, lights) {
+  glowTex = glowTex || canvasTex(64, 64, (g, w) => {
+    const gr = g.createRadialGradient(w / 2, w / 2, 0, w / 2, w / 2, w / 2);
+    gr.addColorStop(0, "rgba(255,230,180,1)"); gr.addColorStop(.25, "rgba(255,190,110,.55)"); gr.addColorStop(1, "rgba(255,160,80,0)");
+    g.fillStyle = gr; g.fillRect(0, 0, w, w);
+  });
+  const curve = new THREE.CatmullRomCurve3(points.map(p => new THREE.Vector3(...p)));
+  scene.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 120, 0.003, 5), new THREE.MeshBasicMaterial({ color: 0x2c3a24 })));
+  for (let i = 0; i < count; i++) {
+    const pos = curve.getPoint((i + 0.5) / count);
+    const color = new THREE.Color(rand() < 0.8 ? 0xffd38f : 0xffb37a);
+    const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.011, 10, 8), new THREE.MeshBasicMaterial({ color }));
+    bulb.position.copy(pos); bulb.position.y -= 0.012; scene.add(bulb);
+    const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
+    glow.position.copy(bulb.position); glow.scale.setScalar(0.14); scene.add(glow);
+    bulbs.push({ glow, phase: rand() * 10, speed: 0.6 + rand() * 1.6 });
+  }
+  for (let i = 0; i < lights; i++) {
+    const l = new THREE.PointLight(0xffb468, 0.9, 2.6, 1.6);
+    l.position.copy(curve.getPoint((i + 0.5) / lights)); l.position.y -= 0.05;
+    scene.add(l); twinkleLights.push({ l, base: 0.9, phase: rand() * 10 });
+  }
+}
+
+/* The polaroid lying propped on the blanket */
+const PW = 0.2, PH = 0.245;
+function buildPolaroid() {
+  polaroidGroup = new THREE.Group();
+  polaroidGroup.position.set(0.15, MATTRESS_TOP + 0.1, 0.13);
+  polaroidGroup.scale.setScalar(1.2);
+  polaroidGroup.rotation.set(-1.12, -0.22, 0.14, "YXZ");
+  scene.add(polaroidGroup);
+  add(box(PW, PH, 0.004), mat({ color: 0xf3efe6, roughness: 0.6 }), 0, 0, -0.002, 0, 0, 0, polaroidGroup);
+  polaroidTex = canvasTex(400, 490, () => {});
+  add(new THREE.PlaneGeometry(PW, PH), mat({ map: polaroidTex, roughness: 0.45 }), 0, 0, 0.0005, 0, 0, 0, polaroidGroup);
+  hitMesh = new THREE.Mesh(new THREE.PlaneGeometry(PW * 1.8, PH * 1.6), new THREE.MeshBasicMaterial({ visible: false }));
+  polaroidGroup.add(hitMesh);
+  photoGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: 0xffe2b0, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0 }));
+  photoGlow.scale.set(0.5, 0.5, 1); photoGlow.position.z = -0.01;
+  polaroidGroup.add(photoGlow);
+  paintPolaroid();
+}
+
+// The small polaroid is always "clouded": the photo shows through a milky, undeveloped haze.
+function paintPolaroid() {
+  if (!polaroidTex) return;
+  const c = polaroidTex.image, g = c.getContext("2d"), w = c.width, h = c.height;
+  g.fillStyle = "#f6f2e9"; g.fillRect(0, 0, w, h);
+  const px = 26, py = 26, ps = w - 52;
+  if (received) {
+    const tiny = document.createElement("canvas"); tiny.width = tiny.height = 18;
+    const img = received.img, s = Math.min(img.width, img.height);
+    tiny.getContext("2d").drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, 18, 18);
+    g.imageSmoothingEnabled = true; g.imageSmoothingQuality = "high";
+    g.drawImage(tiny, px, py, ps, ps);
+    g.fillStyle = "rgba(238,230,214,.5)"; g.fillRect(px, py, ps, ps);
+  } else {
+    const gr = g.createLinearGradient(px, py, px + ps, py + ps);
+    gr.addColorStop(0, "#7d8580"); gr.addColorStop(.55, "#a3a89e"); gr.addColorStop(1, "#858b84");
+    g.fillStyle = gr; g.fillRect(px, py, ps, ps);
+  }
+  seed = 99;
+  for (let i = 0; i < 9; i++) {
+    const cx = px + rand() * ps, cy = py + rand() * ps, r = ps * (0.2 + rand() * 0.35);
+    const gr = g.createRadialGradient(cx, cy, 0, cx, cy, r);
+    gr.addColorStop(0, `rgba(255,252,245,${received ? .28 : .18})`); gr.addColorStop(1, "rgba(255,252,245,0)");
+    g.fillStyle = gr; g.fillRect(px, py, ps, ps);
+  }
+  if (received) { g.fillStyle = "#4a3f37"; g.font = "700 40px Caveat"; g.textAlign = "center"; g.fillText(`for ${ME} ♡`, w / 2, h - 30); }
+  polaroidTex.needsUpdate = true;
+  photoGlow.material.opacity = received ? 0.5 : 0;
+}
+
+/* =========================================================
+   Camera: home view, zoom to the polaroid and back
+   ========================================================= */
+const homeTarget = new THREE.Vector3(0.1, 0.66, 0.05);
+const homeDir = new THREE.Vector3(0.28, 0.3, 1).normalize();
+const camPos = new THREE.Vector3(), camTarget = new THREE.Vector3();
+let tween = null;
+let view = "home"; // home | zooming | open
+const pointer = { x: 0, y: 0 };
+
+function homePos() {
+  return homeTarget.clone().addScaledVector(homeDir, innerWidth / innerHeight < 1 ? 2.15 : 1.75);
+}
+function closeView() {
+  const pos = new THREE.Vector3(), q = new THREE.Quaternion();
+  polaroidGroup.getWorldPosition(pos); polaroidGroup.getWorldQuaternion(q);
+  const normal = new THREE.Vector3(0, 0, 1).applyQuaternion(q);
+  return { pos: pos.clone().addScaledVector(normal, 0.75), target: pos };
+}
+function flyTo(pos, target, ms, done) {
+  tween = { fromP: camPos.clone(), fromT: camTarget.clone(), toP: pos, toT: target, t0: performance.now(), ms, done };
+}
+const ease = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+
+function openPolaroid(instant = false) {
+  if (view !== "home" && !instant) return;
+  $("taphint").classList.add("gone");
+  view = "zooming";
+  const show = () => { view = "open"; renderOverlay(true); $("overlay").classList.add("open"); };
+  if (!renderer) return show();
+  const { pos, target } = closeView();
+  if (instant) { camPos.copy(pos); camTarget.copy(target); show(); }
+  else { flyTo(pos, target, 1100, null); setTimeout(show, 650); }
+}
+function closePolaroid() {
+  if (view !== "open" || !renderer) return;
+  if (pending) { URL.revokeObjectURL(pending.url); pending = null; setMode(false); }
+  $("overlay").classList.remove("open");
+  $("status").textContent = "";
+  view = "zooming";
+  flyTo(homePos(), homeTarget.clone(), 1100, () => { view = "home"; $("taphint").classList.remove("gone"); });
+}
+
+/* =========================================================
+   Overlay (the big polaroid)
+   ========================================================= */
+let pending = null;  // { blob, url } — resized photo waiting to be sent
+
+function ago(ms) {
+  const m = Math.round(ms / 60000);
+  if (m < 1) return "just now";
+  if (m < 60) return `${m}m ago`;
+  return `${Math.round(m / 60)}h ago`;
+}
+function left(ms) {
+  const m = Math.max(0, Math.round(ms / 60000));
+  return m < 60 ? `fades in ${m}m` : `fades in ${Math.round(m / 60)}h`;
+}
+
+function renderOverlay(animate) {
+  const photo = $("photo");
+  photo.classList.remove("developing");
+  photo.innerHTML = "";
+  if (pending) {
+    photo.classList.remove("cloudy");
+    photo.style.backgroundImage = `url("${pending.url}")`;
+    $("capMain").textContent = `for ${THEM}`;
+    $("capLeft").textContent = "preview";
+  } else if (received) {
+    photo.classList.remove("cloudy");
+    photo.style.backgroundImage = `url("${received.url}")`;
+    if (animate && received.fresh) { void photo.offsetWidth; photo.classList.add("developing"); received.fresh = false; }
+    $("capMain").textContent = `from ${THEM} · ${ago(Date.now() - received.date)}`;
+    $("capLeft").textContent = left(received.date + LIFETIME - Date.now());
+    $("pickText").textContent = "send one back";
+  } else {
+    photo.classList.add("cloudy");
+    photo.style.backgroundImage = "";
+    photo.innerHTML = `<div class="empty">${tokenBad ? "GitHub didn't accept the token. Tap to paste it again." : "nothing yet…"}</div>`;
+    $("capMain").textContent = "";
+    $("capLeft").textContent = "";
+    $("pickText").textContent = "send a photo";
+  }
+}
+
+$("photo").onclick = async () => {
+  if (!tokenBad || pending) return;
+  await refresh(); paintPolaroid(); renderOverlay(true);
+};
+
 $("file").onchange = async e => {
   const file = e.target.files[0];
   if (!file) return;
@@ -133,62 +579,152 @@ $("file").onchange = async e => {
   const c = document.createElement("canvas");
   c.width = Math.round(bmp.width * scale); c.height = Math.round(bmp.height * scale);
   c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height);
-  pending = await new Promise(r => c.toBlob(r, "image/jpeg", 0.85));
-  show(URL.createObjectURL(pending));
+  const blob = await new Promise(r => c.toBlob(r, "image/jpeg", 0.85));
+  if (pending) URL.revokeObjectURL(pending.url);
+  pending = { blob, url: URL.createObjectURL(blob) };
   setMode(true);
-  $("status").textContent = "Preview: send it?";
+  renderOverlay(false);
+  $("status").textContent = "";
   e.target.value = "";
 };
 
-$("cancel").onclick = () => { pending = null; setMode(false); $("status").textContent = ""; loadLatest(); };
+$("cancel").onclick = () => { URL.revokeObjectURL(pending.url); pending = null; setMode(false); renderOverlay(false); $("status").textContent = ""; };
 
 $("send").onclick = async () => {
-  $("send").disabled = true; $("status").textContent = "Sending…";
+  $("send").disabled = $("cancel").disabled = true;
+  $("status").textContent = "sending…";
   try {
-    const path = `to-${THEM}.jpg`;
-    // Replacing a file needs its current id (sha), if it exists.
-    const cur = await fetch(api(path), { cache: "no-store", headers: headers() });
-    const sha = cur.ok ? (await cur.json()).sha : undefined;
-    const content = await new Promise(r => {
-      const fr = new FileReader(); fr.onload = () => r(fr.result.split(",")[1]); fr.readAsDataURL(pending);
-    });
-    const res = await fetch(`https://api.github.com/repos/${REPO}/contents/${path}`, {
-      method: "PUT", headers: headers({ "Content-Type": "application/json" }),
-      body: JSON.stringify({ message: `photo for ${THEM}`, content, sha, branch: BRANCH }),
-    });
-    if (!res.ok) {
-      if (res.status === 401) forgetToken();
-      throw new Error(`${res.status} ${(await res.json().catch(() => ({}))).message || ""}`);
-    }
-    pending = null; setMode(false); $("status").textContent = `Sent to ${THEM} ✓`; loadLatest();
+    await sendPhoto(pending.blob);
+    $("status").textContent = `sent to ${THEM} ♡`;
+    setTimeout(() => {
+      URL.revokeObjectURL(pending.url); pending = null; setMode(false); renderOverlay(false);
+      renderer ? closePolaroid() : ($("status").textContent = "");
+    }, 900);
   } catch (err) {
-    $("status").textContent = "Send failed: " + err.message;
+    $("status").textContent = "couldn't send: " + err.message;
   }
-  $("send").disabled = false;
+  $("send").disabled = $("cancel").disabled = false;
 };
 
-// Share a ready-to-use link for the other person (includes the token).
-$("invite").textContent = `Send ${THEM} their link`;
+function setMode(previewing) {
+  $("send").hidden = $("cancel").hidden = !previewing;
+  $("pick").hidden = previewing;
+  $("close").hidden = previewing;
+}
+
+$("close").onclick = closePolaroid;
+$("overlay").addEventListener("click", e => { if (e.target === $("overlay") && !pending) closePolaroid(); });
+
+// Share a ready-to-use link for the other person (includes the token). Only on the first person's page.
+if (ME !== PEOPLE[0]) $("invite").hidden = true;
+$("invite").textContent = `send ${THEM} their link`;
 $("invite").onclick = async () => {
   const url = `${location.origin}${location.pathname}?me=${THEM}&t=${encodeURIComponent(token())}`;
   try { await navigator.share({ url }); }
   catch (e) {
     if (e.name === "AbortError") return;
-    try { await navigator.clipboard.writeText(url); $("status").textContent = "Link copied"; }
+    try { await navigator.clipboard.writeText(url); $("status").textContent = "link copied"; }
     catch { prompt("Copy this link:", url); }
   }
 };
 
-// On iPhone Safari (not already opened from the home screen), show how to add it.
+// Home-screen hint on iPhone Safari
 const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 let hintSeen = false; try { hintSeen = localStorage.getItem("hint_seen") === "1"; } catch {}
 if (isIOS && !navigator.standalone && !hintSeen) $("hint").hidden = false;
 $("hideHint").onclick = () => { $("hint").hidden = true; try { localStorage.setItem("hint_seen", "1"); } catch {} };
 
-function setMode(previewing) {
-  $("send").hidden = $("cancel").hidden = !previewing;
-  $("pick").hidden = previewing;
+/* =========================================================
+   Input, resize, render loop
+   ========================================================= */
+const raycaster = new THREE.Raycaster();
+let downAt = null;
+canvas.addEventListener("pointerdown", e => { downAt = { x: e.clientX, y: e.clientY }; });
+canvas.addEventListener("pointerup", e => {
+  if (!downAt || Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) > 12 || view !== "home" || !hitMesh) return;
+  const ndc = new THREE.Vector2((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+  raycaster.setFromCamera(ndc, camera);
+  if (raycaster.intersectObject(hitMesh).length) openPolaroid();
+});
+addEventListener("pointermove", e => {
+  pointer.x = (e.clientX / innerWidth) * 2 - 1;
+  pointer.y = (e.clientY / innerHeight) * 2 - 1;
+});
+addEventListener("deviceorientation", e => {
+  if (e.gamma == null) return;
+  pointer.x = Math.max(-1, Math.min(1, e.gamma / 25));
+  pointer.y = Math.max(-1, Math.min(1, (e.beta - 45) / 25));
+});
+
+function resize() {
+  const w = innerWidth, h = innerHeight;
+  camera.aspect = w / h;
+  camera.fov = w / h < 1 ? 58 : 45;
+  camera.updateProjectionMatrix();
+  if (renderer) renderer.setSize(w, h, false);
+  if (view === "home" && !tween) camPos.copy(homePos());
 }
+addEventListener("resize", resize);
+
+const clock = new THREE.Clock();
+function frame() {
+  requestAnimationFrame(frame);
+  if (document.hidden) return;
+  const t = clock.getElapsedTime();
+  if (tween) {
+    const k = Math.min(1, (performance.now() - tween.t0) / tween.ms), e = ease(k);
+    camPos.lerpVectors(tween.fromP, tween.toP, e);
+    camTarget.lerpVectors(tween.fromT, tween.toT, e);
+    if (k >= 1) { const d = tween.done; tween = null; d && d(); }
+  }
+  // Gentle drift and parallax in the home view
+  const sway = view === "home" ? 1 : 0.15;
+  camera.position.set(
+    camPos.x + (pointer.x * 0.12 + Math.sin(t * 0.3) * 0.02) * sway,
+    camPos.y + (-pointer.y * 0.06 + Math.sin(t * 0.4) * 0.01) * sway,
+    camPos.z);
+  camera.lookAt(camTarget);
+  for (const b of bulbs) b.glow.material.opacity = 0.6 + 0.4 * Math.sin(t * b.speed + b.phase) ** 2;
+  for (const f of twinkleLights) f.l.intensity = f.base * (0.85 + 0.15 * Math.sin(t * 1.3 + f.phase));
+  if (received) photoGlow.material.opacity = 0.35 + 0.2 * Math.sin(t * 2);
+  renderer.render(scene, camera);
+}
+
+/* =========================================================
+   Start
+   ========================================================= */
+(async () => {
+  if (renderer) {
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 0.95;
+    buildScene();
+  } else {
+    $("close").style.display = "none";
+  }
+  resize();
+  camPos.copy(homePos()); camTarget.copy(homeTarget);
+  try { await document.fonts.load("700 40px Caveat"); } catch {}
+
+  await refresh();
+  if (renderer) { paintPolaroid(); frame(); }
+  // A photo is waiting → start with it already open.
+  if (received || !renderer) openPolaroid(true);
+  else $("taphint").classList.remove("gone");
+
+  const update = async () => {
+    if (pending) return;
+    const changed = await refresh();
+    if (!changed) { if (view === "open") renderOverlay(false); return; }
+    paintPolaroid();
+    if (view === "open") renderOverlay(true);
+    else if (view === "home" && received) openPolaroid();
+  };
+  setInterval(update, POLL);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) update(); });
+})();
 </script>
 </body>
 </html>
