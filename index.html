@@ -389,6 +389,29 @@ const throwH = (x, z) => {
 const topH = (x, z) => (x > THROW.x0 && x < THROW.x1 && z > THROW.z0 && z < THROW.z1) ? Math.max(duvetH(x, z), throwH(x, z)) : duvetH(x, z);
 const onBed = (x, z, sink = 0) => topH(x, z) - sink;
 
+// bottom bunk surfaces (same idea, its own rumples)
+const lowDents = [];
+function lowH(x, z) {
+  let h = YL + 0.075 + 0.028 * fbm(x * 2.2, z * 2.2, 5.5) + 0.01 * fbm(x * 5, z * 4.5, 1.1, 3)
+    + 0.028 * Math.max(0, Math.sin(x * 4.4 + 2.0 * fbm(x * 1.5, z * 1.5, 2.7) - z * 1.1)) ** 2
+    + 0.007 * (1 - Math.abs(noise.noise(x * 6, z * 4.5, 9.4))) ** 3
+    + 0.05 * Math.exp(-((x - 0.75) ** 2 / 0.03 + (z + 0.1) ** 2 / 0.06));
+  h -= 0.05 * THREE.MathUtils.smoothstep(-0.05, -0.18, x);
+  h -= 0.03 * THREE.MathUtils.smoothstep(BACK + 0.1, BACK + 0.02, z);
+  for (const d of lowDents) {
+    const q = ((x - d.x) ** 2) / (d.rx * d.rx) + ((z - d.z) ** 2) / (d.rz * d.rz);
+    h -= d.depth * Math.exp(-q * 1.6);
+    h += d.depth * 0.35 * Math.exp(-((Math.sqrt(q) - 1.15) ** 2) * 6);
+  }
+  return h;
+}
+const LTHROW = { x0: 0.62, x1: 1.0, z0: -0.4, z1: 0.42 };
+const lowThrowH = (x, z) => {
+  const e = THREE.MathUtils.smoothstep(LTHROW.x0, LTHROW.x0 + 0.08, x) * THREE.MathUtils.smoothstep(LTHROW.z1, LTHROW.z1 - 0.07, z) * THREE.MathUtils.smoothstep(LTHROW.z0, LTHROW.z0 + 0.07, z);
+  return lowH(x, z) + 0.007 + e * (0.014 + 0.05 * Math.max(0, fbm(x * 4, z * 4, 3.3)) + 0.02 * (fbm(x * 9, z * 9, 7.2, 2) + 0.5));
+};
+const lowTop = (x, z, sink = 0) => ((x > LTHROW.x0 && x < LTHROW.x1 && z > LTHROW.z0 && z < LTHROW.z1) ? Math.max(lowH(x, z), lowThrowH(x, z)) : lowH(x, z)) - sink;
+
 /* =========================================================
    Room: floor, walls with a window, ceiling, skirting
    ========================================================= */
@@ -784,11 +807,26 @@ function buildBunk() {
   const sheet = pbr("stretch_poplin", { repeat: [5, 3], color: 0xf6efe4, normal: 0.7 });
   for (const yy of [YL, Y0]) add(new RoundedBoxGeometry(RIGHT - LEFT - 0.04, 0.16, FRONT - BACK - 0.03, 2, 0.02), sheet, 0, yy - 0.08, (FRONT + BACK) / 2);
 
-  // bottom bunk: rumpled gingham duvet + pillow
-  const lowH = (x, z) => YL + 0.06 + 0.03 * fbm(x * 2, z * 2, 5.5) + 0.012 * fbm(x * 6, z * 6, 1.1, 3) - 0.04 * THREE.MathUtils.smoothstep(-0.15, -0.3, x);
-  add(surface(-0.3, RIGHT - 0.03, BACK + 0.02, FRONT, 90, 50, lowH, (x, z, y) => z > FRONT - 0.04 ? y - (z - FRONT + 0.04) * 3.5 : y),
-    pbr("gingham_check", { repeat: [4, 2.5], color: 0xf7e4e4, normal: 0.8, side: THREE.DoubleSide }));
-  addPillow(-0.68, YL + 0.1, BACK + 0.22, 0.6, 0.4, 0.18, -0.6, 0.1, "stretch_poplin", 0xf1e8dc, (x, z) => YL + 0.04);
+  // bottom bunk: sage linen duvet, rumpled, with the same dents, pillows, throw and toys as the top
+  lowDents.push(
+    { x: -0.05, z: -0.28, rx: 0.12, rz: 0.1, depth: 0.03 },
+    { x: 0.55, z: 0.05, rx: 0.12, rz: 0.1, depth: 0.025 },
+    { x: 0.25, z: 0.12, rx: 0.2, rz: 0.12, depth: 0.03 },   // where someone was lying
+  );
+  add(surface(-0.12, RIGHT - 0.03, BACK + 0.02, FRONT, 140, 90, lowH, (x, z, y) => {
+    if (z > FRONT - 0.04) y -= (z - (FRONT - 0.04)) * 3.5;
+    if (x > RIGHT - 0.08) y -= (x - (RIGHT - 0.08)) * 2.5;
+    return y;
+  }), pbr("rough_linen", { repeat: [7, 5], color: 0xb4c4a6, normal: 1.6, side: THREE.DoubleSide, sheen: 0xe2f0d8 }));
+  addPillow(-0.62, YL + 0.13, BACK + 0.16, 0.64, 0.44, 0.22, -0.95, 0.06, "stretch_poplin", 0xf4ede2);
+  addPillow(-0.15, YL + 0.12, BACK + 0.16, 0.62, 0.42, 0.21, -0.95, -0.05, "stretch_poplin", 0xefe6da);
+  addPillow(-0.5, YL + 0.12, BACK + 0.36, 0.42, 0.42, 0.16, -0.55, 0.2, "velour_velvet", 0xd98fa0, null, 0xffc8d4);
+  addPillow(-0.78, YL + 0.08, 0.1, 0.36, 0.32, 0.13, -0.15, -0.5, "gingham_check", 0xffd9d9);
+  addPillow(0.0, YL + 0.08, BACK + 0.4, 0.34, 0.3, 0.12, -0.35, 0.5, "curly_teddy_natural", 0xffffff);
+  add(surface(LTHROW.x0, LTHROW.x1, LTHROW.z0, LTHROW.z1, 60, 50, lowThrowH),
+    pbr("knitted_fleece", { repeat: [2.5, 2.5], color: new THREE.Color(3.2, 2.5, 2.3), normal: 1.6, side: THREE.DoubleSide }));
+  contactShadow(-0.05, -0.28, 0.13, 0.11, 0.5, lowTop);
+  contactShadow(0.55, 0.05, 0.12, 0.11, 0.45, lowTop);
 
   // top bunk duvet — dusty rose linen, with dents where things rest
   dents.push(
@@ -825,13 +863,13 @@ function buildBunk() {
 
 // Soft darkening under things lying on the duvet, so they sink in visually too.
 let _shadowTex;
-function contactShadow(x, z, rx, rz, strength) {
+function contactShadow(x, z, rx, rz, strength, heightFn = topH) {
   _shadowTex = _shadowTex || canvasTexture(128, 128, (g, w) => {
     const gr = g.createRadialGradient(64, 64, 0, 64, 64, 64);
     gr.addColorStop(0, "rgba(0,0,0,1)"); gr.addColorStop(0.55, "rgba(0,0,0,.5)"); gr.addColorStop(1, "rgba(0,0,0,0)");
     g.fillStyle = gr; g.fillRect(0, 0, w, w);
   });
-  const g = surface(x - rx * 1.4, x + rx * 1.4, z - rz * 1.4, z + rz * 1.4, 24, 24, (px, pz) => topH(px, pz) + 0.004);
+  const g = surface(x - rx * 1.4, x + rx * 1.4, z - rz * 1.4, z + rz * 1.4, 24, 24, (px, pz) => heightFn(px, pz) + 0.004);
   const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ map: _shadowTex, transparent: true, opacity: strength, depthWrite: false }));
   m.renderOrder = 1; scene.add(m);
 }
@@ -1033,44 +1071,53 @@ function buildCat() {
   focusTargets.push(cat.children[0].children[0]);
 }
 
-function buildToys() {
-  const eye = new THREE.MeshStandardMaterial({ color: 0x0b0806, roughness: 0.12 });
-  // teddy bear sitting under the polaroid
-  const tsdf = (x, y, z) => {
-    let d = sdEll(x, y, z, 0, 0.088, 0, 0.074, 0.088, 0.064);
-    d = smin(d, sdSphere(x, y, z, 0, 0.2, 0.004, 0.06), 0.02);
-    d = smin(d, sdEll(x, y, z, 0, 0.188, 0.054, 0.03, 0.023, 0.026), 0.01);
+const toyEye = new THREE.MeshStandardMaterial({ color: 0x0b0806, roughness: 0.12 });
+let _teddyGeo, _bunnyGeo;
+function makeTeddy(x, y, z, rot, color) {
+  _teddyGeo = _teddyGeo || sdfGeometry((px, py, pz) => {
+    let d = sdEll(px, py, pz, 0, 0.088, 0, 0.074, 0.088, 0.064);
+    d = smin(d, sdSphere(px, py, pz, 0, 0.2, 0.004, 0.06), 0.02);
+    d = smin(d, sdEll(px, py, pz, 0, 0.188, 0.054, 0.03, 0.023, 0.026), 0.01);
     for (const s of [-1, 1]) {
-      d = smin(d, sdEll(x, y, z, s * 0.046, 0.252, -0.002, 0.022, 0.022, 0.013), 0.008);
-      d = smin(d, sdCap(x, y, z, s * 0.06, 0.14, 0.008, s * 0.084, 0.07, 0.042, 0.023), 0.012);
-      d = smin(d, sdCap(x, y, z, s * 0.036, 0.034, 0.02, s * 0.05, 0.03, 0.092, 0.029), 0.012);
+      d = smin(d, sdEll(px, py, pz, s * 0.046, 0.252, -0.002, 0.022, 0.022, 0.013), 0.008);
+      d = smin(d, sdCap(px, py, pz, s * 0.06, 0.14, 0.008, s * 0.084, 0.07, 0.042, 0.023), 0.012);
+      d = smin(d, sdCap(px, py, pz, s * 0.036, 0.034, 0.02, s * 0.05, 0.03, 0.092, 0.029), 0.012);
     }
     return d;
-  };
+  }, 0.32, 52);
   const teddy = new THREE.Group();
-  teddy.position.set(0.12, onBed(0.12, -0.3, 0.02), -0.3); teddy.rotation.set(-0.12, 0.25, 0);
+  teddy.position.set(x, y, z); teddy.rotation.set(...rot);
   scene.add(teddy);
-  furry(sdfGeometry(tsdf, 0.32, 52), { color: 0xb57d52, length: 0.006, density: 1600, tabby: 0, breath: 0 }, 10, teddy);
-  for (const s of [-1, 1]) add(new THREE.SphereGeometry(0.0068, 12, 10), eye, s * 0.024, 0.212, 0.058, 0, 0, 0, teddy);
-  add(new THREE.SphereGeometry(0.0085, 12, 10), eye, 0, 0.196, 0.08, 0, 0, 0, teddy);
+  furry(_teddyGeo, { color, length: 0.006, density: 1600, tabby: 0, breath: 0 }, 10, teddy);
+  for (const s of [-1, 1]) add(new THREE.SphereGeometry(0.0068, 12, 10), toyEye, s * 0.024, 0.212, 0.058, 0, 0, 0, teddy);
+  add(new THREE.SphereGeometry(0.0085, 12, 10), toyEye, 0, 0.196, 0.08, 0, 0, 0, teddy);
   focusTargets.push(teddy.children[0].children[0]);
-
-  // cream bunny lying by the throw, ears flopped back
-  const bsdf = (x, y, z) => {
-    let d = sdEll(x, y, z, 0, 0.058, 0, 0.068, 0.058, 0.088);
-    d = smin(d, sdEll(x, y, z, 0, 0.074, 0.098, 0.048, 0.044, 0.048), 0.02);
-    d = smin(d, sdSphere(x, y, z, 0, 0.06, -0.094, 0.024), 0.01);
+  return teddy;
+}
+function makeBunny(x, y, z, rot, color) {
+  _bunnyGeo = _bunnyGeo || sdfGeometry((px, py, pz) => {
+    let d = sdEll(px, py, pz, 0, 0.058, 0, 0.068, 0.058, 0.088);
+    d = smin(d, sdEll(px, py, pz, 0, 0.074, 0.098, 0.048, 0.044, 0.048), 0.02);
+    d = smin(d, sdSphere(px, py, pz, 0, 0.06, -0.094, 0.024), 0.01);
     for (const s of [-1, 1]) {
-      d = smin(d, sdEll(x, y, z, s * 0.022, 0.104, 0.03, 0.019, 0.008, 0.068), 0.008);
-      d = smin(d, sdEll(x, y, z, s * 0.03, 0.015, 0.082, 0.018, 0.014, 0.03), 0.01);
+      d = smin(d, sdEll(px, py, pz, s * 0.022, 0.104, 0.03, 0.019, 0.008, 0.068), 0.008);
+      d = smin(d, sdEll(px, py, pz, s * 0.03, 0.015, 0.082, 0.018, 0.014, 0.03), 0.01);
     }
     return d;
-  };
+  }, 0.3, 48);
   const bunny = new THREE.Group();
-  bunny.position.set(0.6, onBed(0.6, 0.36, 0.02), 0.36); bunny.rotation.set(0, -2.6, 0.1);
+  bunny.position.set(x, y, z); bunny.rotation.set(...rot);
   scene.add(bunny);
-  furry(sdfGeometry(bsdf, 0.3, 48), { color: 0xf3e8d8, length: 0.008, density: 1500, tabby: 0, breath: 0 }, 10, bunny);
-  for (const s of [-1, 1]) add(new THREE.SphereGeometry(0.0055, 10, 8), eye, s * 0.026, 0.084, 0.138, 0, 0, 0, bunny);
+  furry(_bunnyGeo, { color, length: 0.008, density: 1500, tabby: 0, breath: 0 }, 10, bunny);
+  for (const s of [-1, 1]) add(new THREE.SphereGeometry(0.0055, 10, 8), toyEye, s * 0.026, 0.084, 0.138, 0, 0, 0, bunny);
+  return bunny;
+}
+function buildToys() {
+  makeTeddy(0.12, onBed(0.12, -0.3, 0.02), -0.3, [-0.12, 0.25, 0], 0xb57d52);   // under the polaroid
+  makeBunny(0.6, onBed(0.6, 0.36, 0.02), 0.36, [0, -2.6, 0.1], 0xf3e8d8);        // by the throw
+  // bottom bunk's toys
+  makeTeddy(-0.05, lowTop(-0.05, -0.28, 0.02), -0.28, [-0.1, -0.3, 0], 0xece4d8);
+  makeBunny(0.55, lowTop(0.55, 0.05, 0.02), 0.05, [0, 2.2, -0.1], 0x8d8b90);
 }
 
 /* =========================================================
@@ -1094,6 +1141,15 @@ function posterTexture(kind) {
       g.fillStyle = "#3b6fd8"; g.font = "64px Pacifico, cursive"; g.fillText("the summer song", W / 2, H * 0.74);
       for (let i = 0; i < 26; i++) { const x = Math.random() * W, y = Math.random() * H; g.fillStyle = ["#ff5fa2", "#3b6fd8", "#ffb340"][i % 3]; star(g, x, y, 8 + Math.random() * 18); }
       for (let i = 0; i < 8; i++) heart(g, 80 + Math.random() * (W - 160), H * 0.8 + Math.random() * 180, 22 + Math.random() * 20, "#ff7fb4");
+    } else if (kind === "moon") {
+      g.fillStyle = "#efe6d6"; g.fillRect(0, 0, W, H);
+      g.fillStyle = "#2b2a3a"; g.textAlign = "center";
+      for (let i = 0; i < 7; i++) {
+        const cy = 170 + i * 150, ph = (i - 3) / 3;
+        g.fillStyle = "#2b2a3a"; g.beginPath(); g.arc(W / 2, cy, 58, 0, 7); g.fill();
+        g.fillStyle = "#efe6d6"; g.beginPath(); g.ellipse(W / 2 + ph * 70, cy, 58 * Math.abs(ph) + 1, 58, 0, 0, 7); g.fill();
+      }
+      g.fillStyle = "#2b2a3a"; g.font = "120px 'Great Vibes', cursive"; g.fillText("goodnight", W / 2, H - 70);
     } else {
       const gr = g.createLinearGradient(0, 0, 0, H);
       gr.addColorStop(0, "#070b24"); gr.addColorStop(0.6, "#1b1f5a"); gr.addColorStop(1, "#5a3c7a");
@@ -1120,7 +1176,7 @@ function star(g, x, y, r) { g.beginPath(); for (let i = 0; i < 10; i++) { const 
 function heart(g, x, y, s, c) { g.fillStyle = c; g.beginPath(); g.moveTo(x, y + s * 0.3); g.bezierCurveTo(x, y, x - s, y, x - s, y + s * 0.35); g.bezierCurveTo(x - s, y + s * 0.8, x, y + s, x, y + s * 1.3); g.bezierCurveTo(x, y + s, x + s, y + s * 0.8, x + s, y + s * 0.35); g.bezierCurveTo(x + s, y, x, y, x, y + s * 0.3); g.fill(); }
 function buildPosters() {
   const tape = new THREE.MeshStandardMaterial({ color: 0xf5f0dc, roughness: 0.5, transparent: true, opacity: 0.75 });
-  [["2002", -0.36, 2.0, 0.03], ["star", 0.66, 1.98, -0.025]].forEach(([kind, x, y, rot]) => {
+  [["2002", -0.36, 2.0, 0.03], ["star", 0.66, 1.98, -0.025], ["moon", 0.3, 0.9, 0.02]].forEach(([kind, x, y, rot]) => {
     const pw = 0.3, ph = 0.42, g = new THREE.PlaneGeometry(pw, ph, 20, 20), p = g.attributes.position;
     for (let i = 0; i < p.count; i++) {
       const u = p.getX(i) / pw + 0.5, v = p.getY(i) / ph + 0.5;
@@ -1213,7 +1269,13 @@ function buildLights() {
   // From the wall hook up to the ceiling and down to the foot post: a loose loop
   const loop = strand([[0.86, 2.0, wz], [1.0, CEIL - 0.02, 0.1], [RIGHT, ry + 0.04, FRONT]], [1.25, 1.2]);
 
-  for (const ids of [wall, rail, loop]) strands.push(makeStrandMesh(ids));
+  // bottom bunk: under the top bunk's front rail, and along its wall
+  const under = strand([[LEFT, Y0 - 0.2, FRONT + 0.03], [-0.5, Y0 - 0.22, FRONT + 0.035], [0.0, Y0 - 0.2, FRONT + 0.035], [0.5, Y0 - 0.22, FRONT + 0.035], [RIGHT, Y0 - 0.2, FRONT + 0.03]], [1.16, 1.2, 1.14, 1.18]);
+  const lwall = strand([[LEFT + 0.03, 1.22, wz], [-0.45, 1.05, wz], [0.05, 1.25, wz], [0.55, 1.08, wz], [RIGHT - 0.03, 1.24, wz]], [1.1, 1.14, 1.12, 1.1]);
+  for (const ids of [wall, rail, loop, under, lwall]) strands.push(makeStrandMesh(ids));
+  for (const ids of [under, lwall]) for (let k = 14; k < ids.length; k += 30) {
+    const l = new THREE.PointLight(0xffa857, 0.2, 2.2, 2); scene.add(l); twinkles.push({ l, id: ids[k], base: 0.2, phase: Math.random() * 10 });
+  }
 
   // Polaroid: clipped with a peg to the lowest point of the big middle swoop.
   let low = wall[0];
@@ -1295,7 +1357,10 @@ function physics(dt, t) {
       if (!p.w) continue;
       if (p.z < WALL_Z + 0.006) p.z = WALL_Z + 0.006;
       if (p.y > CEIL - 0.005) p.y = CEIL - 0.005;
-      if (p.x > LEFT && p.x < RIGHT && p.z > BACK && p.z < FRONT) { const h = duvetH(p.x, p.z) + 0.01; if (p.y < h) p.y = h; }
+      if (p.x > LEFT && p.x < RIGHT && p.z > BACK && p.z < FRONT) {
+        if (p.y > Y0 - 0.12) { const h = duvetH(p.x, p.z) + 0.01; if (p.y < h) p.y = h; }          // top bunk
+        else { if (p.y > Y0 - 0.2) p.y = Y0 - 0.2; const h = lowH(p.x, p.z) + 0.01; if (p.y < h) p.y = h; }   // under it: bottom bunk
+      }
     }
   }
 }
@@ -1724,6 +1789,7 @@ window.__screen = () => {
   return { polaroid: toPx(polaroidCenter()), wire: toPx(new THREE.Vector3(P[w].x, P[w].y, P[w].z)) };
 };
 window.__look = (yaw, pitch) => { look.yaw = yaw; look.pitch = pitch; };
+window.__eye = (x, y, z) => { EYE.set(x, y, z); };
 window.__scene = scene;
 window.__ray = (x, y) => { raycaster.setFromCamera(new THREE.Vector2(x, y), camera); return raycaster.intersectObjects(scene.children, true).filter(h => h.object.isMesh); };
 window.__info = () => ({ tris: renderer.info.render.triangles, calls: renderer.info.render.calls, quality });
