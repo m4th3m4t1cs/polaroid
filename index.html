@@ -939,6 +939,13 @@ function sdfGeometry(sdf, size, res = 56) {
   g.setAttribute("normal", new THREE.BufferAttribute(mc.normalArray.slice(0, n * 3), 3));
   mc.geometry.dispose();
   g.scale(size / 2, size / 2, size / 2); g.translate(0, size / 2 - 0.02, 0);
+  const pa = g.attributes.position, na = g.attributes.normal, uv = new Float32Array(pa.count * 2);
+  for (let i = 0; i < pa.count; i++) {
+    const ax = Math.abs(na.getX(i)), ay = Math.abs(na.getY(i)), az = Math.abs(na.getZ(i));
+    const [u, v] = ax > ay && ax > az ? [pa.getZ(i), pa.getY(i)] : ay > az ? [pa.getX(i), pa.getZ(i)] : [pa.getX(i), pa.getY(i)];
+    uv[i * 2] = u * 4; uv[i * 2 + 1] = v * 4;
+  }
+  g.setAttribute("uv", new THREE.BufferAttribute(uv, 2));
   return g;
 }
 
@@ -1241,17 +1248,22 @@ function buildFurniture() {
   for (const sx of [-1, 1]) add(new THREE.BoxGeometry(0.07, dh + 0.07, 0.03), paintWood, dx + sx * (dw / 2 + 0.035), (dh + 0.07) / 2, FW - 0.015);
   add(new THREE.BoxGeometry(dw + 0.14, 0.07, 0.03), paintWood, dx, dh + 0.035, FW - 0.015);
   add(new THREE.CylinderGeometry(0.008, 0.008, 0.06, 10), brass, dx, 1.75, FW - 0.07, Math.PI / 2, 0, 0);
-  // fluffy robe hanging from the hook: a draped tube, pinched at the top, folds flaring toward the hem
-  const robe = new THREE.CylinderGeometry(1, 1, 1, 48, 40, true);
-  { const pp = robe.attributes.position;
-    for (let i = 0; i < pp.count; i++) {
-      const a = Math.atan2(pp.getZ(i), pp.getX(i)), v = 0.5 - pp.getY(i);            // v: 0 at hook → 1 at hem
-      const rw = 0.03 + 0.2 * Math.pow(v, 0.55), rd = 0.02 + 0.07 * Math.pow(v, 0.6);
-      const fold = 1 + 0.08 * Math.sin(a * 9 + v * 2) * v + 0.04 * Math.sin(a * 17) * v;
-      pp.setXYZ(i, dx + Math.cos(a) * rw * fold, 1.78 - v * 1.0, FW - 0.075 - Math.max(0, Math.sin(a)) * rd * fold * 0 - (Math.sin(a) + 1) * rd * fold * 0.5 - 0.01 * v);
-    }
-    robe.computeVertexNormals(); }
-  add(robe, pbr("curly_teddy_natural", { repeat: [2, 4], color: 0xf2c4cf, normal: 1, side: THREE.DoubleSide }));
+  // fluffy robe hanging from the hook: shoulders, sleeves hanging down, tie belt, soft folds
+  const robeSdf = (x, y, z) => {
+    const v = THREE.MathUtils.clamp((0.98 - y) / 0.9, 0, 1);                          // 0 at the hook → 1 at the hem
+    const hw = 0.06 + 0.17 * Math.pow(v, 0.45), th = 0.025 + 0.035 * Math.pow(v, 0.5);
+    const fold = 0.008 * Math.sin(x * 70 + y * 4) * v;
+    let d = sdEll(x, y, z + fold, 0, 0.52, 0, hw * 1.2, 0.5, th);                       // body
+    d = Math.max(d, y - 1.0, 0.1 - y + 0.004 * Math.sin(x * 60));                     // straight hem
+    for (const s of [-1, 1]) d = smin(d, sdCap(x, y, z, s * 0.09, 0.86, 0.01, s * 0.2, 0.42, 0.03, 0.045), 0.03);  // sleeves
+    d = smin(d, sdCap(x, y, z, -0.17, 0.55, 0.045, 0.17, 0.55, 0.045, 0.012), 0.01);   // belt
+    d = smin(d, sdCap(x, y, z, 0.06, 0.55, 0.05, 0.09, 0.3, 0.055, 0.011), 0.008);      // belt end hanging
+    d = smin(d, sdEll(x, y, z, 0, 0.93, -0.01, 0.08, 0.06, 0.04), 0.03);               // gathered collar at the hook
+    return d;
+  };
+  const robe = sdfGeometry(robeSdf, 1.04, 64);
+  const robeMesh = add(robe, pbr("curly_teddy_natural", { repeat: [3, 3], color: 0xf5c9d3, normal: 1.2 }), dx, 0.8, FW - 0.1, 0, Math.PI, 0);
+  robeMesh.castShadow = true; focusTargets.push(robeMesh);
 
   /* --- study desk against the left wall, corkboard above --- */
   loadModel("WoodenTable_03", { x: LW + 0.36, z: 1.55, ry: Math.PI / 2, scale: 0.92 }).then(desk => {
@@ -1359,20 +1371,15 @@ function buildFurniture() {
   loadModel("potted_plant_04", { x: WIN.x1 - 0.2, y: WIN.y0, z: WALL_Z + 0.06, ry: 0.5 });
 
   /* --- squashy bean bag by the rug, with a phone left on it --- */
-  const bg = new THREE.SphereGeometry(1, 72, 54), bp = bg.attributes.position;
-  for (let i = 0; i < bp.count; i++) {
-    let x = bp.getX(i), y = bp.getY(i), z = bp.getZ(i);
-    const n = 0.05 * fbm(x * 2.5, y * 2.5, z * 2.5) + 0.02 * Math.sin(x * 11 + z * 7) * Math.max(0, y);
-    const bulge = 1 + 0.25 * (1 - Math.abs(y));                                    // fat in the middle, slumped
-    x *= 0.4 * bulge + n; z *= 0.38 * bulge + n;
-    y = y > 0 ? y * 0.2 : y * 0.14;                                                 // low, squashy
-    y -= 0.1 * Math.exp(-((x + 0.06) ** 2 + z * z) / 0.035) * (y > 0 ? 1 : 0);     // where she sat
-    y += 0.12 * Math.exp(-((x - 0.3) ** 2 + z * z) / 0.03) * (y > 0 ? 1 : 0);      // the backrest bunched up
-    bp.setXYZ(i, x, y + 0.15, z);
-  }
-  bg.computeVertexNormals();
-  focusTargets.push(add(bg, pbr("velour_velvet", { repeat: [3, 2], color: 0x7d9cae, normal: 0.9, sheen: 0xcfe6f2 }), 0.55, 0, 2.55, 0, 0.6, 0));
-  add(new RoundedBoxGeometry(0.075, 0.008, 0.155, 3, 0.004), new THREE.MeshStandardMaterial({ color: 0x1a1a1f, roughness: 0.2, metalness: 0.5 }), 0.52, 0.28, 2.55, -0.2, 0.8, 0.08);
+  const bg = sdfGeometry((x, y, z) => {
+    let d = sdEll(x, y, z, 0, 0.2, 0, 0.44, 0.22, 0.4);                                   // squashy body
+    d = smin(d, sdEll(x, y, z, 0.2, 0.36, 0, 0.2, 0.2, 0.32), 0.12);                      // backrest bunched up
+    d = -smin(-d, sdEll(x, y, z, -0.08, 0.5, 0, 0.24, 0.12, 0.22), 0.06);              // where she sat: a soft dip
+    d += 0.008 * Math.sin(x * 30 + z * 20) * Math.max(0, y - 0.15);                       // soft creases
+    return Math.max(d, -y);
+  }, 1.0, 56);
+  focusTargets.push(caster(add(bg, pbr("velour_velvet", { repeat: [3, 2], color: 0xe6b7a8, normal: 0.9, sheen: 0xffe3d6 }), 0.55, 0, 2.55, 0, 0.6, 0)));
+  add(new RoundedBoxGeometry(0.075, 0.008, 0.155, 3, 0.004), new THREE.MeshStandardMaterial({ color: 0x1a1a1f, roughness: 0.2, metalness: 0.5 }), 0.5, 0.39, 2.56, -0.18, 0.8, 0.08);
 
   /* --- trailing pothos hanging by the window --- */
   const hx = WIN.x1 + 0.35, hy = 2.0, hz = WALL_Z + 0.35;
