@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Polaroid">
+<link rel="apple-touch-icon" href="icon.png">
+<title>Polaroid</title>
+<style>
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    min-height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 28px; padding: 24px; background: #2b2724; font-family: -apple-system, system-ui, sans-serif; color: #f4efe8;
+  }
+  .polaroid {
+    width: min(82vw, 420px); background: #fbf9f5; padding: 14px 14px 64px;
+    box-shadow: 0 12px 30px rgba(0,0,0,.45); transform: rotate(-1.5deg);
+  }
+  .photo {
+    aspect-ratio: 1; background: #1c1a19 center/cover no-repeat;
+    display: flex; align-items: center; justify-content: center; color: #6d6660; font-size: 14px;
+  }
+  .buttons { display: flex; gap: 12px; }
+  button, label.btn {
+    font: inherit; font-size: 17px; padding: 12px 22px; border-radius: 999px; border: 0; cursor: pointer;
+    background: #f4efe8; color: #2b2724;
+  }
+  button.primary { background: #e8553e; color: #fff; }
+  button:disabled { opacity: .5; }
+  .status { font-size: 14px; min-height: 1.2em; color: #c9c0b6; }
+  input[type=file] { display: none; }
+</style>
+</head>
+<body>
+  <div class="polaroid"><div class="photo" id="photo">loading…</div></div>
+
+  <div class="buttons">
+    <label class="btn" id="pick">Choose photo<input type="file" id="file" accept="image/*"></label>
+    <button class="primary" id="send" hidden>Send</button>
+    <button id="cancel" hidden>Cancel</button>
+  </div>
+  <div class="status" id="status"></div>
+
+<script>
+// ---- Fill these in from Supabase: Project Settings → API ----
+const SUPABASE_URL = "https://YOUR-PROJECT.supabase.co";
+const SUPABASE_KEY = "YOUR-ANON-KEY";
+// -------------------------------------------------------------
+// The two of you. Rename freely (lowercase, no spaces).
+const PEOPLE = ["me", "friend"];
+
+const $ = id => document.getElementById(id);
+
+// Who's looking comes from the address: ?me=me or ?me=friend.
+// Add to Home Screen from that address and it's remembered.
+const ME = new URLSearchParams(location.search).get("me");
+if (!PEOPLE.includes(ME)) {
+  document.body.innerHTML = `<div class="status">Who are you?</div><div class="buttons">${
+    PEOPLE.map(p => `<button onclick="location.search='?me=${p}'">${p}</button>`).join("")}</div>`;
+  throw new Error("pick who you are");
+}
+const THEM = PEOPLE.find(p => p !== ME);
+// You see the photo sent to you; Send replaces the photo for them.
+const FILE_URL = `${SUPABASE_URL}/storage/v1/object/photos/to-${THEM}.jpg`;
+const PUBLIC_URL = `${SUPABASE_URL}/storage/v1/object/public/photos/to-${ME}.jpg`;
+let pending = null; // resized photo waiting to be sent
+
+function show(src) { $("photo").style.backgroundImage = `url("${src}")`; $("photo").textContent = ""; }
+
+// Show the latest shared photo; refresh every 30s unless previewing a new one.
+function loadLatest() {
+  if (pending) return;
+  const url = `${PUBLIC_URL}?t=${Date.now()}`;
+  const img = new Image();
+  img.onload = () => show(url);
+  img.onerror = () => { $("photo").textContent = "no photo yet"; };
+  img.src = url;
+}
+loadLatest();
+setInterval(loadLatest, 30000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) loadLatest(); });
+
+// Pick → shrink to 1200px JPEG → preview.
+$("file").onchange = async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const bmp = await createImageBitmap(file);
+  const scale = Math.min(1, 1200 / Math.max(bmp.width, bmp.height));
+  const c = document.createElement("canvas");
+  c.width = Math.round(bmp.width * scale); c.height = Math.round(bmp.height * scale);
+  c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height);
+  pending = await new Promise(r => c.toBlob(r, "image/jpeg", 0.85));
+  show(URL.createObjectURL(pending));
+  setMode(true);
+  $("status").textContent = "Preview: send it?";
+  e.target.value = "";
+};
+
+$("cancel").onclick = () => { pending = null; setMode(false); $("status").textContent = ""; loadLatest(); };
+
+$("send").onclick = async () => {
+  $("send").disabled = true; $("status").textContent = "Sending…";
+  const res = await fetch(FILE_URL, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${SUPABASE_KEY}`, apikey: SUPABASE_KEY,
+               "Content-Type": "image/jpeg", "x-upsert": "true", "cache-control": "max-age=0" },
+    body: pending,
+  }).catch(() => null);
+  $("send").disabled = false;
+  if (res && res.ok) {
+    pending = null; setMode(false); $("status").textContent = `Sent to ${THEM} ✓`; loadLatest();
+  } else {
+    $("status").textContent = "Send failed: " + (res ? await res.text() : "no connection");
+  }
+};
+
+function setMode(previewing) {
+  $("send").hidden = $("cancel").hidden = !previewing;
+  $("pick").hidden = previewing;
+}
+</script>
+</body>
+</html>
