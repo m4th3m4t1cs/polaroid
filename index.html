@@ -1117,7 +1117,7 @@ showScene();
     Strand(back, { n: 30, sag: 125, every: 2, scale: .66, dim: .9, ly: -52, ry: 4, wireScale: .8 }),
     Strand(back, { n: 30, sag: 85, every: 2, scale: .6, dim: .8, ly: 6, ry: -48, wireScale: .75 }),
   ];
-  const main = Strand(front, { n: 34, sag: 58, every: 1, scale: .82, grab: true, card: true });
+  const main = Strand(front, { n: 34, sag: 58, every: 2, scale: .82, grab: true, card: true });
   const strands = [...backs, main];
   const pin = el("g", {}, front);
   pin.innerHTML = `<rect x="-6.5" y="-12" width="13" height="38" rx="2" fill="url(#fl-wood)" stroke="rgba(90,60,30,.4)" stroke-width=".6"/>
