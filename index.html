@@ -15,7 +15,7 @@
 <script src="stickers.js?v=1"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Share+Tech+Mono&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
 <style>
   :root {
     --bg: #f3ebe0;
@@ -301,12 +301,59 @@
   .stickers button img { width: 100%; }
   .stickers button.on { outline: 2px solid var(--ink); outline-offset: 1px; }
   .stickers .none { font-size: 13px; color: var(--soft); }
-  .notifybar { border: 0; text-align: left; font: inherit; padding-right: 16px; cursor: pointer; top: calc(70px + env(safe-area-inset-top)); bottom: auto; }
+  .notifybar { border: 0; text-align: left; font: inherit; padding-right: 16px; cursor: pointer; top: calc(70px + env(safe-area-inset-top)); bottom: auto;
+               background: var(--paperbg), linear-gradient(172deg, #fdfbf6, #ede6da); color: var(--ink); border-radius: 2px; transform: rotate(-.4deg); }
+  /* ---------- one look for every button: paper, like the polaroid ---------- */
+  :root { --paperbg: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .4 0 0 0 0 .35 0 0 0 0 .3 0 0 0 .08 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E"); }
+  .scene-btn, .round, .bigbtn, .songbtn, .songpill, .nudgetab, .sent {
+    background: var(--paperbg), linear-gradient(172deg, #fdfbf6 0%, #f6f1e7 60%, #ede6da 100%);
+    color: var(--ink); border: 0; border-radius: 2px; font-family: var(--serif);
+    box-shadow: inset 0 0 0 .5px rgba(0,0,0,.08), 0 1px 1px rgba(0,0,0,.14), 2px 5px 10px rgba(40,22,10,.28);
+    -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .bigbtn.primary, #sendBtn, #songSend { background: var(--paperbg), linear-gradient(172deg, #e9d6b8 0%, #dcc4a0 100%); color: #3a2a1e; }
+  .scene-btn { width: 46px; height: 46px; transform: rotate(-2deg); }
+  .scene-btn:nth-child(even) { transform: rotate(1.5deg); }
+  .round { width: 46px; height: 46px; }
+  .round.loved { color: var(--love); }
+  .bigbtn { border-radius: 2px; font-weight: 600; letter-spacing: .01em; }
+  .bigbtn:nth-child(1) { transform: rotate(-.6deg); } .bigbtn:nth-child(2) { transform: rotate(.5deg); }
+  .songbtn { border-radius: 2px; transform: rotate(-.3deg); }
+  .songpill { border-radius: 2px; }
+  .songpill img { border-radius: 50%; }
+  .sent { border-radius: 2px; }
+  .sent img { border-radius: 2px; }
+  .under { justify-content: center; }
+  /* the vertical tab tucked behind the right edge of the hanging polaroid */
+  .hang { position: relative; }
+  .polaroid { width: min(76vw, 380px, 50dvh); }
+  .under { width: min(76vw, 380px, 50dvh); }
+  .nudgetab { position: absolute; z-index: 0; left: 100%; top: 26%; margin-left: -4px; width: 40px; padding: 16px 0 12px 4px;
+              display: flex; flex-direction: row; align-items: center; gap: 8px; font-size: 17px; font-weight: 600; cursor: pointer;
+              writing-mode: vertical-rl; border-radius: 0 3px 3px 0; transform-origin: left center; transition: transform .2s; }
+  .nudgetab .h { color: var(--love); font-size: 20px; writing-mode: horizontal-tb; }
+  .nudgetab:active { transform: translateX(3px); }
+  .nudgetab.pulse { animation: tabpulse .6s; }
+  @keyframes tabpulse { 40% { transform: translateX(6px) rotate(2deg); } }
+  .polaroid#card { z-index: 1; }
+
+  /* ---------- nostalgia: film grain, a drifting light leak, date stamps ---------- */
+  .grain { position: fixed; inset: -50%; z-index: 60; pointer-events: none; opacity: .09; mix-blend-mode: multiply;
+           background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .2 0 0 0 0 .15 0 0 0 0 .1 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23g)'/%3E%3C/svg%3E");
+           animation: grain .9s steps(6) infinite; }
+  @keyframes grain { 0% { transform: translate(0, 0); } 20% { transform: translate(-3%, 2%); } 40% { transform: translate(2%, -4%); } 60% { transform: translate(-4%, -1%); } 80% { transform: translate(3%, 3%); } }
+  .leak { position: fixed; inset: 0; z-index: 59; pointer-events: none; mix-blend-mode: screen;
+          background: radial-gradient(ellipse 60% 45% at 0% 8%, rgba(255,120,60,.42), transparent 70%), radial-gradient(ellipse 45% 35% at 100% 96%, rgba(255,90,120,.22), transparent 70%);
+          animation: leak 11s ease-in-out infinite alternate; }
+  @keyframes leak { 0% { opacity: .55; } 50% { opacity: .95; } 100% { opacity: .65; filter: hue-rotate(-12deg); } }
+  .stamp { position: absolute; right: 6%; bottom: 5%; z-index: 2; pointer-events: none; font: 15px/1 "Share Tech Mono", ui-monospace, monospace; letter-spacing: .12em;
+           color: #ff9a4a; text-shadow: 0 0 3px rgba(255,120,40,.9), 0 0 8px rgba(255,90,20,.5); opacity: .88; }
+  .mini .stamp { font-size: 9px; }
+  @media (prefers-reduced-motion: reduce) { .grain, .leak { animation: none; } }
   @media (prefers-reduced-motion: reduce) { .hang, .bulb { animation: none; } }
 </style>
 </head>
 <body>
-<div class="room" id="room"></div><div class="room-shade"></div>
+<div class="room" id="room"></div><div class="room-shade"></div><div class="grain"></div><div class="leak"></div>
 <div class="app" id="app">
   <header>
     <div class="logo">polaroid</div>
@@ -322,6 +369,7 @@
     <svg class="lights" id="lights" viewBox="0 0 400 70" preserveAspectRatio="none"></svg>
     <div class="hang">
       <div class="peg"></div>
+      <button class="nudgetab" id="nudgeBtn"><span>thinking of you</span><span class="h">♡</span></button>
       <div class="polaroid" id="card">
         <div class="photo undeveloped" id="photo"></div>
         <div class="cap" id="cap"></div>
@@ -334,7 +382,6 @@
       <button class="round" id="heartBtn" aria-label="Love it"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20s-7-4.4-9.2-8.6C1.2 8.2 3 4.8 6.4 4.8c2 0 3.4 1.2 4.1 2.4h3c.7-1.2 2.1-2.4 4.1-2.4 3.4 0 5.2 3.4 3.6 6.6C19 15.6 12 20 12 20z" transform="translate(0 0)"/></svg></button>
       <button class="round" id="saveBtn" aria-label="Save"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 4v11m0 0l-4.5-4.5M12 15l4.5-4.5M5 19.5h14"/></svg></button>
     </div>
-    <button class="nudgepill" id="nudgeBtn">thinking of you <span class="h">♡</span></button>
     </div>
     <button class="songpill" id="songPill" hidden><img id="songPillImg" alt=""><span id="songPillText"></span></button>
   </div>
@@ -548,7 +595,7 @@ function markSeen() {
 /* =========================================================
    Backdrop: renders of the cozy 3D room (bunk, fireplace, snowy window)
    ========================================================= */
-const SCENES = ["bunk", "fire", "window"];
+const SCENES = ["bunk", "fire", "window", "desk", "vanity", "shelf", "cork"];
 let sceneIx = 0; try { sceneIx = Math.max(0, SCENES.indexOf(localStorage.getItem("scene") || "bunk")); } catch {}
 function showScene() {
   const room = $("room"), src = `bg/${SCENES[sceneIx]}.jpg`;
@@ -597,6 +644,8 @@ function left(ms) {
   return m < 60 ? `fades in ${m} min` : `fades in ${Math.round(m / 60)} hrs`;
 }
 
+const stampText = ms => { const d = new Date(ms), p = n => String(n).padStart(2, "0"); return `'${p(d.getFullYear() % 100)} ${p(d.getMonth() + 1)} ${p(d.getDate())}`; };
+function addStamp(photoEl, ms) { const s = document.createElement("div"); s.className = "stamp"; s.textContent = stampText(ms); photoEl.append(s); }
 function render() {
   const photo = $("photo"), cap = $("cap");
   putSticker($("card"), null);
@@ -620,7 +669,7 @@ function render() {
   } else {
     if (!received.developing) photo.className = "photo";
     cap.textContent = received.caption || "";
-    if (!received.developing) putSticker($("card"), received.sticker);
+    if (!received.developing) { putSticker($("card"), received.sticker); addStamp(photo, received.date); }
   }
   $("metaText").textContent = `${ago(Date.now() - received.date)} · ${left(received.date + LIFETIME - Date.now())}`;
   $("heartBtn").classList.toggle("loved", received.loved);
@@ -912,6 +961,7 @@ async function openGallery() {
       el.innerHTML = `<span class="pin"></span><div class="mini"><div class="photo loading"></div><div class="cap"></div></div><div class="label"></div>`;
       el.querySelector(".cap").textContent = it.p.caption;
       putSticker(el.querySelector(".mini"), it.p.sticker);
+      addStamp(el.querySelector(".photo"), it.date);
       el.querySelector(".label").textContent = `${from} · ${when(it.date)}`;
       queue.push(() => photoBlob(it.p).then(blob => {
         urls[it.p.ref] = urls[it.p.ref] || URL.createObjectURL(blob);
@@ -991,6 +1041,7 @@ async function showBig(item) {
   $("lbPhoto").style.backgroundImage = `url("${urls[item.ref]}")`;
   $("lbCap").textContent = item.caption;
   putSticker($("lbPhoto").parentElement, item.sticker);
+  $("lbPhoto").innerHTML = ""; addStamp($("lbPhoto"), item.date);
   $("lbText").textContent = `${item.to === ME ? `from ${THEM_NAME}` : "from you"} · ${when(item.date)}, ${new Date(item.date).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }).toLowerCase()}`;
   $("lbSave").onclick = e => { e.stopPropagation(); savePhoto(blob, urls[item.ref]); };
   $("lightbox").classList.add("open");
