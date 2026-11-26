@@ -377,6 +377,25 @@
            color: #ff9a4a; text-shadow: 0 0 3px rgba(255,120,40,.9), 0 0 8px rgba(255,90,20,.5); opacity: .88; }
   .mini .stamp { font-size: 9px; }
   @media (prefers-reduced-motion: reduce) { .leak { animation: none; } }
+  /* the wax-seal heart: beats ba-dum every few seconds, cracks open when tapped */
+  .seal { display: block; width: 30px; height: 30px; writing-mode: horizontal-tb; filter: drop-shadow(0 1.5px 1.5px rgba(60,10,15,.45)); animation: badum 4.2s ease-in-out infinite; }
+  .seal svg { width: 100%; height: 100%; overflow: visible; }
+  .seal .half { transition: transform .5s cubic-bezier(.3,1.6,.5,1); transform-origin: 20px 30px; }
+  .nudgetab.pulse .seal { animation: none; }
+  .nudgetab.pulse .seal .l { transform: rotate(-16deg) translate(-2px, 1px); }
+  .nudgetab.pulse .seal .r { transform: rotate(16deg) translate(2px, 1px); }
+  @keyframes badum { 0%, 70%, 100% { transform: scale(1); } 75% { transform: scale(1.18); } 79% { transform: scale(.98); } 83% { transform: scale(1.12); } 88% { transform: scale(1); } }
+  /* the fairy lights live on their own layer across the whole page */
+  .hanger .lights { visibility: hidden; }
+  .peg { visibility: hidden; }
+  .hang { animation: none !important; will-change: transform; }
+  .string { position: absolute; left: 0; top: 0; width: 100%; z-index: 5; pointer-events: none; overflow: visible; }
+  .string .hit { pointer-events: stroke; cursor: grab; touch-action: none; }
+  .string .glowc { opacity: var(--glow, .55); }
+  body.tod-night .string { --glow: 1; }
+  body.tod-golden .string { --glow: .8; }
+  body.tod-morning .string, body.tod-day .string { --glow: .45; }
+  @media (prefers-reduced-motion: reduce) { .seal { animation: none; } }
   .polaroid#card, .lightbox .polaroid, .thing .mini {
     background:
       radial-gradient(circle at 12% 88%, rgba(150,100,40,.18) 0 3px, transparent 5px),
@@ -458,7 +477,7 @@
 </style>
 </head>
 <body>
-<div class="room" id="room"></div><div class="room-shade"></div><div class="tod"></div><canvas class="snow" id="snow"></canvas><div class="leak"></div>
+<div class="room" id="room"></div><div class="room-shade"></div><div class="tod"></div><canvas class="snow" id="snow"></canvas><div class="leak"></div><svg class="string" id="string" aria-hidden="true"></svg>
 <div class="app" id="app">
   <header>
     <div class="logo">polaroid</div>
@@ -475,7 +494,13 @@
     <svg class="lights" id="lights" viewBox="0 0 400 70" preserveAspectRatio="none"></svg>
     <div class="hang">
       <div class="peg"></div>
-      <button class="nudgetab" id="nudgeBtn"><span>thinking of you</span><span class="h">♡</span></button>
+      <button class="nudgetab" id="nudgeBtn"><span>thinking of you</span><span class="seal" aria-hidden="true"><svg viewBox="0 0 40 40"><defs><radialGradient id="wax" cx=".38" cy=".32" r=".75"><stop offset="0" stop-color="#d4505a"/><stop offset=".55" stop-color="#a8243a"/><stop offset="1" stop-color="#6e1222"/></radialGradient></defs>
+<path class="half l" d="M20 2.5 C14 1.8 9.5 3.5 6.6 6.8 C3.2 9.4 2 13.6 2.6 17.5 C1.4 21.6 2.6 26 5.6 29 C7.4 33.4 11.4 36.6 16 37.2 C17.4 37.6 18.8 37.7 20 37.6 L19 31 L21.2 25 L18.6 19 L21 13 L19.2 7.5 Z" fill="url(#wax)"/>
+<path class="half r" d="M20 2.5 C25.6 1.6 30.6 3.8 33.6 7.4 C37 10 38.2 14.4 37.4 18.4 C38.6 22.8 37 27.2 34 30 C32 34.2 27.6 37.2 23 37.4 C22 37.6 21 37.6 20 37.6 L19 31 L21.2 25 L18.6 19 L21 13 L19.2 7.5 Z" fill="url(#wax)"/>
+<circle cx="20" cy="20" r="11.5" fill="none" stroke="#6e1222" stroke-width="1.2" opacity=".55"/><circle cx="20" cy="20" r="11.5" fill="none" stroke="#f08a92" stroke-width=".6" opacity=".35" transform="translate(-.6 -.6)"/>
+<path d="M20 27.2 C15.4 24 12.4 21.2 12.4 17.8 C12.4 15.4 14.2 13.6 16.4 13.6 C18 13.6 19.3 14.5 20 15.8 C20.7 14.5 22 13.6 23.6 13.6 C25.8 13.6 27.6 15.4 27.6 17.8 C27.6 21.2 24.6 24 20 27.2 Z" fill="#7d1628" opacity=".85"/>
+<path d="M13.6 17 C13.8 15.6 15 14.6 16.4 14.6" stroke="#f3a0a8" stroke-width=".9" fill="none" opacity=".7" stroke-linecap="round"/>
+<ellipse cx="13" cy="9.5" rx="4" ry="2.2" fill="#fff" opacity=".22" transform="rotate(-30 13 9.5)"/></svg></span></button>
       <div class="polaroid" id="card">
         <div class="photo undeveloped" id="photo"></div>
         <div class="cap" id="cap"></div>
@@ -873,6 +898,131 @@ showScene();
 /* =========================================================
    Fairy lights across the top
    ========================================================= */
+/* =========================================================
+   Fairy lights: a real string you can grab, with the polaroid hanging from it
+   ========================================================= */
+(function fairyLights() {
+  const svg = $("string"), ns = "http://www.w3.org/2000/svg", hang = document.querySelector(".hang"), peg = document.querySelector(".peg");
+  const el = (tag, attrs, parent = svg) => { const e = document.createElementNS(ns, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); parent.append(e); return e; };
+  svg.innerHTML = `<defs>
+    <radialGradient id="fl-glow"><stop offset="0" stop-color="#ffd38a" stop-opacity=".75"/><stop offset=".35" stop-color="#ffb35c" stop-opacity=".28"/><stop offset="1" stop-color="#ff9a40" stop-opacity="0"/></radialGradient>
+    <radialGradient id="fl-glass" cx=".4" cy=".3" r=".8"><stop offset="0" stop-color="#fffbe8"/><stop offset=".35" stop-color="#ffe7a8"/><stop offset=".8" stop-color="#ffbf5e"/><stop offset="1" stop-color="#e9963c"/></radialGradient>
+    <linearGradient id="fl-wood" x1="0" x2="1"><stop offset="0" stop-color="#c9a274"/><stop offset=".4" stop-color="#ecd6b2"/><stop offset=".6" stop-color="#e2c69c"/><stop offset="1" stop-color="#b98f5f"/></linearGradient></defs>`;
+  const shadow = el("path", { fill: "none", stroke: "rgba(40,22,8,.22)", "stroke-width": 2.4, "stroke-linecap": "round" });
+  const wire = el("path", { fill: "none", stroke: "#6d4526", "stroke-width": 1.8, "stroke-linecap": "round" });
+  const twist = el("path", { fill: "none", stroke: "#b98250", "stroke-width": 1, "stroke-dasharray": "2.2 2.6", "stroke-linecap": "round" });
+  const hit = el("path", { class: "hit", fill: "none", stroke: "transparent", "stroke-width": 44 });
+  const glows = el("g", {}), bulbsG = el("g", {});
+  const pin = el("g", {});
+  pin.innerHTML = `<rect x="-6.5" y="-12" width="13" height="38" rx="2" fill="url(#fl-wood)" stroke="rgba(90,60,30,.4)" stroke-width=".6"/>
+    <path d="M0 -12 V26" stroke="rgba(90,60,30,.45)" stroke-width=".8"/><rect x="-8" y="2" width="16" height="5" rx="2.5" fill="#9ca0a6"/>
+    <path d="M-7 3.2h14M-7 4.6h14M-7 6h14" stroke="#62666c" stroke-width=".5"/>`;
+
+  const N = 34, MID = N >> 1;
+  let P = [], L = [], W = 0, restMid = null, grabbed = -1, gx = 0, gy = 0, running = false, quietFor = 0;
+  let th = 0, om = 0, lastVx = 0;   // the polaroid's swing
+  const bulbs = [];
+  function build() {
+    W = document.documentElement.clientWidth;
+    hang.style.transform = "";
+    const r = peg.getBoundingClientRect(), px = r.left + r.width / 2 + scrollX, py = r.top + 6 + scrollY;
+    const left = -30, right = W + 30, sag = 58;
+    P = []; L = [];
+    for (let i = 0; i < N; i++) {
+      const t = i / (N - 1), x = left + (right - left) * t;
+      const y = (py - sag) + sag * (1 - Math.pow(2 * t - 1, 2)) * 1.08;
+      P.push({ x, y, ox: x, oy: y });
+    }
+    for (let i = 0; i < N - 1; i++) L.push(Math.hypot(P[i + 1].x - P[i].x, P[i + 1].y - P[i].y) * 1.05);
+    for (let k = 0; k < 500; k++) step(1);   // let it settle before showing it
+    const dx = px - P[MID].x, dy = py - P[MID].y;
+    for (const p of P) { p.x += dx; p.y += dy; p.ox = p.x; p.oy = p.y; }
+    restMid = { x: P[MID].x, y: P[MID].y };
+    svg.setAttribute("height", document.documentElement.scrollHeight);
+    glows.innerHTML = ""; bulbsG.innerHTML = ""; bulbs.length = 0;
+    for (let i = 2; i < N - 2; i++) {
+      if (i === MID || i % 2) continue;
+      const g = el("circle", { r: 15, fill: "url(#fl-glow)", class: "glowc" }, glows);
+      const b = el("g", {}, bulbsG);
+      b.innerHTML = `<rect x="-2.2" y="0" width="4.4" height="4" rx="1" fill="#4d3b2a"/><path d="M-2.2 1.3h4.4M-2.2 2.6h4.4" stroke="#8b7357" stroke-width=".45"/>
+        <path d="M-3 4 C-3.6 7.5 -2.4 11 0 11.6 C2.4 11 3.6 7.5 3 4 Z" fill="url(#fl-glass)"/><path d="M-1.4 5.5 C-1.8 7.4 -1.2 9 -.4 9.6" stroke="#fff" stroke-width=".7" fill="none" opacity=".8" stroke-linecap="round"/>`;
+      bulbs.push({ i, g, b, f: .6 + Math.random() * 1.4, ph: Math.random() * 6.28 });
+    }
+    draw(performance.now());
+  }
+  function step(heavy) {
+    for (let i = 1; i < N - 1; i++) {
+      const p = P[i]; if (i === grabbed) continue;
+      const vx = (p.x - p.ox) * .972, vy = (p.y - p.oy) * .972;
+      p.ox = p.x; p.oy = p.y;
+      p.x += vx; p.y += vy + (i === MID ? 1.1 : .5);
+    }
+    if (grabbed > 0) {
+      // a string can't stretch: keep the grabbed point within reach of both ends
+      let nx = P[grabbed].x + (gx - P[grabbed].x) * .5, ny = P[grabbed].y + (gy - P[grabbed].y) * .5;
+      let reachL = 0, reachR = 0; for (let i = 0; i < grabbed; i++) reachL += L[i]; for (let i = grabbed; i < N - 1; i++) reachR += L[i];
+      for (let k = 0; k < 3; k++) for (const [A, R] of [[P[0], reachL * 1.03], [P[N - 1], reachR * 1.03]]) {
+        const dx = nx - A.x, dy = ny - A.y, d = Math.hypot(dx, dy);
+        if (d > R) { nx = A.x + dx / d * R; ny = A.y + dy / d * R; }
+      }
+      const p = P[grabbed]; p.ox = p.x; p.oy = p.y; p.x = nx; p.y = ny;
+    }
+    const fixed = i => i === 0 || i === N - 1 || i === grabbed;
+    for (let k = 0; k < 14; k++) for (let i = 0; i < N - 1; i++) {
+      const a = P[i], b = P[i + 1], dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 1, diff = (d - L[i]) / d;
+      const fa = fixed(i) ? 0 : 1, fb = fixed(i + 1) ? 0 : 1, sum = fa + fb;
+      if (!sum) continue;
+      a.x += dx * diff * fa / sum; a.y += dy * diff * fa / sum;
+      b.x -= dx * diff * fb / sum; b.y -= dy * diff * fb / sum;
+    }
+  }
+  const curve = () => { let d = `M${P[0].x} ${P[0].y}`; for (let i = 1; i < N - 1; i++) { const mx = (P[i].x + P[i + 1].x) / 2, my = (P[i].y + P[i + 1].y) / 2; d += ` Q${P[i].x} ${P[i].y} ${mx} ${my}`; } return d + ` L${P[N - 1].x} ${P[N - 1].y}`; };
+  function draw(t) {
+    const d = curve();
+    wire.setAttribute("d", d); twist.setAttribute("d", d); hit.setAttribute("d", d);
+    shadow.setAttribute("d", d); shadow.setAttribute("transform", "translate(3 11)");
+    for (const B of bulbs) {
+      const a = P[B.i], n = P[B.i + 1], ang = Math.atan2(n.y - a.y, n.x - a.x) * 57.3;
+      B.b.setAttribute("transform", `translate(${a.x} ${a.y}) rotate(${ang * .35 + (a.x - a.ox) * 6})`);
+      B.g.setAttribute("cx", a.x); B.g.setAttribute("cy", a.y + 9);
+      B.g.style.opacity = "";
+      B.g.setAttribute("r", 14 + 2.2 * Math.sin(t / 1000 * B.f + B.ph));
+    }
+    // the polaroid swings from the middle of the string, like a pendulum
+    const m = P[MID], vx = m.x - m.ox, ax = vx - lastVx; lastVx = vx;
+    om += (-.0065 * Math.sin(th) - ax * .012 * Math.cos(th)) ; om *= .985; th += om;
+    const dx = Math.max(-90, Math.min(90, m.x - restMid.x)), dy = Math.max(-26, Math.min(150, m.y - restMid.y));
+    th = Math.max(-.6, Math.min(.6, th));
+    hang.style.transform = `translate(${dx}px, ${dy}px) rotate(${th * 57.3}deg)`;
+    pin.setAttribute("transform", `translate(${m.x} ${m.y - 6}) rotate(${th * 57.3})`);
+  }
+  function loop(t) {
+    step(); draw(t);
+    let e = Math.abs(om) * 40; for (const p of P) e += Math.abs(p.x - p.ox) + Math.abs(p.y - p.oy);
+    quietFor = e < .25 && grabbed < 0 ? quietFor + 1 : 0;
+    if (quietFor > 90) { running = false; return; }   // asleep until touched again
+    requestAnimationFrame(loop);
+  }
+  const wake = () => { quietFor = 0; if (!running) { running = true; requestAnimationFrame(loop); } };
+  const pt = e => ({ x: e.clientX + scrollX, y: e.clientY + scrollY });
+  hit.addEventListener("pointerdown", e => {
+    e.preventDefault(); const q = pt(e);
+    let best = 1, bd = 1e9; for (let i = 1; i < N - 1; i++) { const d = Math.hypot(P[i].x - q.x, P[i].y - q.y); if (d < bd) { bd = d; best = i; } }
+    grabbed = best; gx = q.x; gy = q.y; hit.setPointerCapture(e.pointerId); hit.style.cursor = "grabbing"; wake();
+  });
+  hit.addEventListener("pointermove", e => { if (grabbed < 0) return; const q = pt(e); gx = q.x; gy = Math.min(q.y, restMid.y + 160); });
+  const drop = () => { grabbed = -1; hit.style.cursor = ""; wake(); };
+  hit.addEventListener("pointerup", drop); hit.addEventListener("pointercancel", drop);
+  // a soft draught now and then, so it never looks frozen
+  setInterval(() => { if (document.hidden || grabbed >= 0 || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const i = 2 + Math.floor(Math.random() * (N - 4)); P[i].ox -= (Math.random() - .5) * 1.6; om += (Math.random() - .5) * .004; wake(); }, 6500);
+  // twinkle without keeping the whole simulation awake
+  setInterval(() => { if (!running && !document.hidden) draw(performance.now()); }, 120);
+  let rt; addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { build(); wake(); }, 150); });
+  requestAnimationFrame(() => { build(); wake(); });
+  window.__swing = () => { P[MID].ox -= 14; wake(); };   // a nudge, used when the polaroid is tapped
+})();
+
 (function drawLights() {
   const svg = $("lights"), ns = "http://www.w3.org/2000/svg";
   const path = document.createElementNS(ns, "path");
@@ -1476,6 +1626,7 @@ function showNudge(at) {
 }
 $("nudge").onclick = () => $("nudge").classList.remove("open");
 $("nudgeBtn").onclick = async () => {
+  setTimeout(() => $("nudgeBtn").classList.remove("pulse"), 1400);
   const btn = $("nudgeBtn");
   btn.classList.remove("pulse"); void btn.offsetWidth; btn.classList.add("pulse");
   hearts(btn, 12);
