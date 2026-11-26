@@ -264,7 +264,13 @@
   .cassette .tape-label small { font-size: 11px; color: var(--soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .cassette .reels { position: absolute; left: 26%; right: 26%; top: 66%; display: flex; justify-content: space-between; }
   .cassette .reels i { width: 15%; aspect-ratio: 1; border-radius: 50%; background: repeating-conic-gradient(#ddd 0 20deg, #555 20deg 60deg); box-shadow: 0 0 0 3px #19181c; }
-  [hidden] { display: none !important; }  [hidden] { display: none !important; }
+  [hidden] { display: none !important; }
+  .devlayer { position: absolute; inset: -12px; background: center/cover no-repeat; }
+  .photo .msg.shake { text-shadow: 0 1px 8px rgba(0,0,0,.45); transition: opacity .3s; pointer-events: none; }
+  .photo .msg.shake .big { animation: wiggle .5s ease-in-out infinite; }
+  @keyframes wiggle { 25% { transform: rotate(-6deg); } 75% { transform: rotate(6deg); } }
+  .hang.jiggle { animation: jiggle .35s ease-out; }
+  @keyframes jiggle { 25% { transform: rotate(-5deg) translateX(-4px); } 60% { transform: rotate(4deg) translateX(3px); } }
   @media (prefers-reduced-motion: reduce) { .hang, .bulb { animation: none; } }
 </style>
 </head>
@@ -581,15 +587,48 @@ function render() {
   $("heartBtn").querySelector("path").setAttribute("fill", received.loved ? "currentColor" : "none");
 }
 
+// Developing: tap to start, then shake the phone to speed it up (like a real one)
+const devFilter = p => { const k = 1 - p; return p >= 1 ? "none" : `brightness(${1 + .9 * k}) saturate(${1 - k * .95}) sepia(${.5 * k}) contrast(${1 - .6 * k}) blur(${10 * k * k}px)`; };
+async function motionAllowed() {
+  if (typeof DeviceMotionEvent === "undefined") return false;
+  if (typeof DeviceMotionEvent.requestPermission === "function") {   // iPhone: asks once
+    try { return (await DeviceMotionEvent.requestPermission()) === "granted"; } catch { return false; }
+  }
+  return "ontouchstart" in window || navigator.maxTouchPoints > 0;
+}
 $("photo").onclick = async () => {
   if (tokenBad) { await refresh(); render(); return; }
   if (!received || iSaw(received.sha) || received.developing) return;
   received.developing = true;
-  const photo = $("photo");
-  photo.className = "photo developing"; photo.innerHTML = "";
+  const photo = $("photo"), hang = document.querySelector(".hang");
+  const canShake = await motionAllowed();
+  photo.className = "photo";
+  photo.innerHTML = `<div class="devlayer"></div>` + (canShake ? `<div class="msg shake"><span class="big">shake it!</span></div>` : "");
+  const layer = photo.querySelector(".devlayer"); layer.style.backgroundImage = `url("${received.url}")`; layer.style.filter = devFilter(0);
   if (navigator.vibrate) navigator.vibrate(10);
-  setTimeout(() => { $("cap").textContent = received.caption || ""; }, 1800);
-  setTimeout(() => { received.developing = false; markSeen(); render(); }, 4000);
+  let p = 0, last = performance.now(), lastMag = null, lastShake = 0, capShown = false;
+  const speed = canShake ? 1 / 14 : 1 / 4;   // seconds to develop on its own
+  const onMotion = e => {
+    const a = e.accelerationIncludingGravity || e.acceleration; if (!a) return;
+    const mag = Math.hypot(a.x || 0, a.y || 0, a.z || 0), now = performance.now();
+    if (lastMag !== null && Math.abs(mag - lastMag) > 7 && now - lastShake > 110) {
+      lastShake = now; p = Math.min(1, p + .07);
+      hang.classList.remove("jiggle"); void hang.offsetWidth; hang.classList.add("jiggle");
+      if (navigator.vibrate) navigator.vibrate(6);
+    }
+    lastMag = mag;
+  };
+  if (canShake) window.addEventListener("devicemotion", onMotion);
+  const step = t => {
+    p = Math.min(1, p + Math.max(0, t - last) / 1000 * speed); last = t;
+    layer.style.filter = devFilter(p);
+    const hint = photo.querySelector(".shake"); if (hint) hint.style.opacity = Math.max(0, 1 - p * 3);
+    if (p > .45 && !capShown) { capShown = true; $("cap").textContent = received.caption || ""; }
+    if (p < 1) return requestAnimationFrame(step);
+    window.removeEventListener("devicemotion", onMotion);
+    received.developing = false; markSeen(); render();
+  };
+  requestAnimationFrame(step);
 };
 
 $("heartBtn").onclick = async () => {
