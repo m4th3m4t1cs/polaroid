@@ -189,7 +189,7 @@
   .who { min-height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; }
   .who .logo { font-size: 54px; }
   /* gallery */
-  .gallery .grid { width: 100%; max-width: 480px; flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; display: grid; grid-template-columns: 1fr 1fr;
+  .gallery .grid-old { width: 100%; max-width: 480px; flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; display: grid; grid-template-columns: 1fr 1fr;
                    gap: 26px 18px; padding: 22px 8px 40px; align-content: start; }
   .gallery .empty { grid-column: 1 / -1; text-align: center; color: var(--soft); font-style: italic; padding-top: 30vh; }
   .gallery .empty .big { display: block; font: 34px/1.2 var(--script); font-style: normal; color: var(--ink); }
@@ -230,27 +230,41 @@
   #songSheet .songcard { width: 100%; transform: none; }
   #songNote { width: 100%; border: 0; border-bottom: 1px solid rgba(46,38,34,.2); background: none; outline: none; text-align: center; font: 30px/1.3 var(--script); color: var(--ink); padding: 6px 0; }
   #songNote::placeholder { color: rgba(46,38,34,.3); }
-  .tabs { display: flex; gap: 4px; background: rgba(46,38,34,.07); border-radius: 999px; padding: 3px; margin-top: 12px; }
-  .tabs button { border: 0; background: none; padding: 6px 18px; border-radius: 999px; font-size: 16px; color: var(--soft); }
-  .tabs .on { background: var(--paper); color: var(--ink); font-weight: 600; box-shadow: 0 1px 3px rgba(0,0,0,.1); }
-  .songrow { grid-column: 1 / -1; display: flex; align-items: center; gap: 12px; text-align: left; background: rgba(255,250,242,.75); border: 0; border-radius: 12px; padding: 8px; color: var(--soft); font-size: 14px; }
-  .songrow img { width: 54px; height: 54px; border-radius: 6px; object-fit: cover; flex: none; background: #d9d0c4; }
-  .songrow b { display: block; color: var(--ink); font-size: 17px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .songrow i { display: block; font: 22px/1.1 var(--script); color: var(--ink); }
-  .songrow div { min-width: 0; }
-  /* thinking of you */
-  .nudge { position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center; text-align: center; overflow: hidden;
-           background: radial-gradient(ellipse at 50% 50%, rgba(120,30,50,.82), rgba(25,10,12,.94)); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); color: #fff4ee;
-           opacity: 0; pointer-events: none; transition: opacity .5s; }
-  .nudge.open { opacity: 1; pointer-events: auto; }
-  .nudge .big { display: block; font: 52px/1.05 var(--script); text-shadow: 0 2px 18px rgba(224,86,111,.7); transform: scale(.8); transition: transform .8s cubic-bezier(.2,1.4,.4,1); }
-  .nudge.open .big { transform: none; }
-  .nudge small { display: block; margin-top: 14px; font-size: 17px; opacity: .8; font-style: italic; }
-  .nudge .fall { position: absolute; top: -40px; color: var(--love); animation: fall linear forwards; }
-  @keyframes fall { to { transform: translateY(115vh) rotate(var(--r)); } }
-  .scene-btn.pulse { animation: pulse .6s; }
-  @keyframes pulse { 40% { transform: scale(1.25); color: var(--love); } }
-  [hidden] { display: none !important; }
+  /* the wall: a corkboard */
+  .gallery { padding-left: 0; padding-right: 0; padding-bottom: 0; }
+  .gallery header { padding: 0 20px; }
+  .wallhint { color: var(--soft); font-size: 15px; font-style: italic; padding: 4px 0 10px; }
+  .wall-scroll { flex: 1; width: 100%; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .board { position: relative; width: 100%; max-width: 520px; margin: 0 auto; min-height: 100%;
+           background-color: #b8875a;
+           background-image:
+             url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='c'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.55' numOctaves='3' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 .32 0 0 0 0 .2 0 0 0 0 .1 0 0 0 1.1 -.35'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23c)'/%3E%3C/svg%3E"),
+             url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='d'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.6' numOctaves='2' seed='3'/%3E%3CfeColorMatrix values='0 0 0 0 .95 0 0 0 0 .8 0 0 0 0 .6 0 0 0 1.4 -.85'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23d)'/%3E%3C/svg%3E"),
+             radial-gradient(ellipse at 50% 30%, rgba(255,220,170,.25), transparent 70%);
+           box-shadow: inset 0 0 0 10px #8a5a34, inset 0 0 0 12px #6e4526, inset 0 0 40px rgba(60,30,10,.45); }
+  .board .empty { position: absolute; left: 0; right: 0; top: 30%; text-align: center; color: #fff3e2; font-style: italic; text-shadow: 0 1px 3px rgba(0,0,0,.4); padding: 0 30px; }
+  .board .empty .big { display: block; font: 36px/1.2 var(--script); font-style: normal; }
+  .thing { position: absolute; transform: rotate(var(--r, 0deg)); touch-action: pan-y; -webkit-touch-callout: none; cursor: grab; transition: box-shadow .2s, scale .2s; }
+  .thing.lifted { scale: 1.07; z-index: 99 !important; cursor: grabbing; }
+  .thing.lifted .mini, .thing.lifted .cassette { box-shadow: 0 2px 2px rgba(0,0,0,.15), 10px 22px 28px rgba(40,20,5,.45); }
+  .pin { position: absolute; left: 50%; top: -7px; width: 16px; height: 16px; margin-left: -8px; border-radius: 50%; z-index: 2;
+         background: radial-gradient(circle at 35% 30%, rgba(255,255,255,.8), transparent 30%), var(--pin, #d9506a);
+         box-shadow: 1px 3px 3px rgba(0,0,0,.4), inset -2px -2px 3px rgba(0,0,0,.25); }
+  .thing.lifted .pin { opacity: 0; }
+  .thing .mini { margin: 0; box-shadow: 0 1px 1px rgba(0,0,0,.18), 3px 7px 10px rgba(40,20,5,.35); transform: none; }
+  .thing .label { position: absolute; left: 0; right: 0; bottom: -4px; transform: translateY(100%); text-align: center; font-size: 13px; color: #fff3e2; text-shadow: 0 1px 2px rgba(0,0,0,.6); }
+  .cassette { position: relative; aspect-ratio: 1.58; border-radius: 6px; padding: 7% 6% 0; color: var(--ink);
+              background: linear-gradient(160deg, #3b3a40, #232227); box-shadow: 0 1px 1px rgba(0,0,0,.2), 3px 7px 10px rgba(40,20,5,.35); }
+  .cassette::after { content: ""; position: absolute; left: 22%; right: 22%; bottom: 0; height: 17%; background: #2d2c31; clip-path: polygon(8% 0, 92% 0, 100% 100%, 0 100%); box-shadow: inset 0 1px 0 rgba(255,255,255,.08); }
+  .cassette .tape-label { background: #f6efe0; border-radius: 3px; height: 54%; display: flex; gap: 6%; padding: 5%; position: relative; overflow: hidden;
+              background-image: repeating-linear-gradient(transparent 0 11px, rgba(120,90,60,.16) 11px 12px); }
+  .cassette .tape-label img { height: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 2px; flex: none; }
+  .cassette .tape-label div { min-width: 0; display: flex; flex-direction: column; justify-content: center; }
+  .cassette .tape-label b { font: 19px/1.05 var(--script); font-weight: 400; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .cassette .tape-label small { font-size: 11px; color: var(--soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cassette .reels { position: absolute; left: 26%; right: 26%; top: 66%; display: flex; justify-content: space-between; }
+  .cassette .reels i { width: 15%; aspect-ratio: 1; border-radius: 50%; background: repeating-conic-gradient(#ddd 0 20deg, #555 20deg 60deg); box-shadow: 0 0 0 3px #19181c; }
+  [hidden] { display: none !important; }  [hidden] { display: none !important; }
   @media (prefers-reduced-motion: reduce) { .hang, .bulb { animation: none; } }
 </style>
 </head>
@@ -305,9 +319,9 @@
 </div>
 
 <div class="sheet gallery" id="gallery">
-  <header><button class="link" id="closeGallery">close</button><div class="title" id="galleryTitle">our photos</div><span style="width:44px"></span></header>
-  <div class="tabs"><button class="on" data-tab="photos">photos</button><button data-tab="songs">songs</button></div>
-  <div class="grid" id="grid"></div>
+  <header><button class="link" id="closeGallery">close</button><div class="title">our wall</div><span style="width:44px"></span></header>
+  <div class="wallhint" id="wallHint">press and hold to move things around</div>
+  <div class="wall-scroll" id="wallScroll"><div class="board" id="board"></div></div>
 </div>
 <div class="lightbox" id="lightbox">
   <div class="polaroid"><div class="photo" id="lbPhoto"></div><div class="cap" id="lbCap"></div></div>
@@ -745,35 +759,109 @@ function when(ms) {
   return d.toLocaleDateString(undefined, { day: "numeric", month: "short" }).toLowerCase();
 }
 const urls = {};
-let galleryTab = "photos";
-document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => {
-  galleryTab = b.dataset.tab;
-  document.querySelectorAll(".tabs button").forEach(x => x.classList.toggle("on", x === b));
-  $("galleryTitle").textContent = galleryTab === "songs" ? "our songs" : "our photos";
-  galleryTab === "songs" ? openSongs() : openGallery();
-});
+const PINS = ["#d9506a", "#e9b23f", "#4f86c6", "#5aa469", "#f2f0ea", "#b46ad1"];
+const hashOf = k => [...k].reduce((h, c) => (h * 31 + c.charCodeAt(0)) | 0, 7) >>> 0;
+let layout = {}, myMoves = {};
+// positions are stored as fractions of the board's width, so they look the same on both phones
+function defaultSpot(i, key) {
+  const h = hashOf(key), col = i % 2, row = Math.floor(i / 2);
+  return { x: (col ? .52 : .07) + ((h % 7) - 3) * .008, y: .07 + row * .62 + (col ? .14 : 0) + ((h >> 3) % 5) * .01, r: ((h >> 6) % 11 - 5) * .9 };
+}
 async function openGallery() {
-  const grid = $("grid");
+  const board = $("board");
   $("gallery").classList.add("open");
-  if (galleryTab === "songs") return openSongs();
-  grid.innerHTML = `<div class="empty">finding your photos…</div>`;
-  const items = await loadHistory();
-  if (!items.length) { grid.innerHTML = `<div class="empty"><span class="big">nothing here yet</span>every photo you two send<br>will collect here</div>`; return; }
-  grid.innerHTML = "";
-  const queue = items.map((item, i) => {
-    const b = document.createElement("button"); b.className = "item";
-    b.innerHTML = `<div class="mini" style="--r:${((i * 37) % 7 - 3) * 0.6}deg"><div class="photo loading"></div><div class="cap"></div></div>
-      ${item.to === ME ? `from <b>${THEM_NAME}</b>` : "from <b>you</b>"} · ${when(item.date)}`;
-    b.querySelector(".cap").textContent = item.caption;
-    b.onclick = () => showBig(item);
-    grid.append(b);
-    return () => photoBlob(item).then(blob => {
-      urls[item.ref] = urls[item.ref] || URL.createObjectURL(blob);
-      const ph = b.querySelector(".photo"); ph.style.backgroundImage = `url("${urls[item.ref]}")`; ph.classList.remove("loading");
-    }).catch(() => {});
+  board.innerHTML = `<div class="empty">finding your photos and songs…</div>`; board.style.height = "";
+  const [photos, songs, saved] = await Promise.all([loadHistory(), loadSongs(), getJSON("board.json")]);
+  layout = (saved && saved.data.layout) || {};
+  const items = [...photos.map(p => ({ kind: "photo", key: `p:${p.ref}`, date: p.date, p })),
+                 ...songs.map(s => ({ kind: "song", key: `s:${s.ref}`, date: s.at, s }))].sort((a, b) => b.date - a.date);
+  if (!items.length) { board.innerHTML = `<div class="empty"><span class="big">your wall is empty</span>every photo and song you two send<br>gets pinned up here</div>`; return; }
+  board.innerHTML = "";
+  const W = board.clientWidth;
+  let maxY = 0;
+  const queue = [];
+  items.forEach((it, i) => {
+    const spot = layout[it.key] || defaultSpot(i, it.key);
+    const el = document.createElement("div"); el.className = "thing"; el.dataset.key = it.key;
+    el.style.left = `${spot.x * 100}%`; el.style.top = `${spot.y * W}px`; el.style.setProperty("--r", `${spot.r}deg`);
+    el.style.zIndex = spot.z || items.length - i;
+    el.style.setProperty("--pin", PINS[hashOf(it.key) % PINS.length]);
+    const from = (it.kind === "photo" ? it.p.to : it.s.to) === ME ? `from ${THEM_NAME}` : "from you";
+    if (it.kind === "photo") {
+      el.style.width = "40%";
+      el.innerHTML = `<span class="pin"></span><div class="mini"><div class="photo loading"></div><div class="cap"></div></div><div class="label"></div>`;
+      el.querySelector(".cap").textContent = it.p.caption;
+      el.querySelector(".label").textContent = `${from} · ${when(it.date)}`;
+      queue.push(() => photoBlob(it.p).then(blob => {
+        urls[it.p.ref] = urls[it.p.ref] || URL.createObjectURL(blob);
+        const ph = el.querySelector(".photo"); ph.style.backgroundImage = `url("${urls[it.p.ref]}")`; ph.classList.remove("loading");
+      }).catch(() => {}));
+      el._open = () => showBig(it.p);
+    } else {
+      el.style.width = "44%";
+      el.innerHTML = `<span class="pin"></span><div class="cassette"><div class="tape-label"><img alt=""><div><b></b><small></small></div></div><div class="reels"><i></i><i></i></div></div>`;
+      el.querySelector("img").src = it.s.thumb || "icon-180.png?v=4";
+      el.querySelector("b").textContent = it.s.title || "a song";
+      el.querySelector("small").textContent = `${from} · ${when(it.date)}`;
+      el._open = () => showSong(it.s, it.s.to === ME ? THEM_NAME : "you");
+    }
+    board.append(el); dragify(el);
+    maxY = Math.max(maxY, spot.y);
   });
+  board.style.height = `${(maxY + .75) * W}px`;
   const worker = async () => { while (queue.length) await queue.shift()(); };
   await Promise.all([worker(), worker(), worker()]);
+}
+
+// press and hold to pick something up, then drag; a quick tap opens it
+let lifted = null;
+document.addEventListener("touchmove", e => { if (lifted) e.preventDefault(); }, { passive: false });
+function dragify(el) {
+  let timer = null, start = null, base = null, moved = false;
+  el.addEventListener("contextmenu", e => e.preventDefault());
+  el.addEventListener("pointerdown", e => {
+    start = { x: e.clientX, y: e.clientY }; moved = false;
+    base = { left: el.offsetLeft, top: el.offsetTop };
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      lifted = el; el.classList.add("lifted"); el.setPointerCapture?.(e.pointerId);
+      if (navigator.vibrate) navigator.vibrate(8);
+    }, e.pointerType === "mouse" ? 120 : 300);
+  });
+  el.addEventListener("pointermove", e => {
+    if (!start) return;
+    const dx = e.clientX - start.x, dy = e.clientY - start.y;
+    if (Math.hypot(dx, dy) > 8) moved = true;
+    if (lifted !== el) { if (moved) { clearTimeout(timer); } return; }
+    const board = $("board"), W = board.clientWidth;
+    const left = Math.max(-el.offsetWidth * .3, Math.min(W - el.offsetWidth * .7, base.left + dx));
+    const top = Math.max(-10, base.top + dy);
+    el.style.left = `${left / W * 100}%`; el.style.top = `${top}px`;
+    if (top + el.offsetHeight + 80 > board.offsetHeight) board.style.height = `${top + el.offsetHeight + 120}px`;
+  });
+  const end = () => {
+    clearTimeout(timer);
+    if (lifted === el) {
+      lifted = null; el.classList.remove("lifted");
+      const W = $("board").clientWidth;
+      const top = Math.max(...[...document.querySelectorAll(".thing")].map(t => +t.style.zIndex || 0)) + 1;
+      el.style.zIndex = top;
+      layout[el.dataset.key] = myMoves[el.dataset.key] = { x: el.offsetLeft / W, y: el.offsetTop / W, r: parseFloat(el.style.getPropertyValue("--r")) || 0, z: top };
+      saveLayout();
+    } else if (start && !moved) el._open();
+    start = null;
+  };
+  el.addEventListener("pointerup", end);
+  el.addEventListener("pointercancel", () => { clearTimeout(timer); if (lifted === el) end(); start = null; });
+}
+let saveTimer = null;
+function saveLayout() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async () => {
+    const cur = await getJSON("board.json");   // keep the other person's moves too
+    const merged = { ...((cur && cur.data.layout) || {}), ...myMoves };
+    await putJSON("board.json", { layout: merged }, `rearranged the wall (${ME})`).catch(() => {});
+  }, 900);
 }
 async function showBig(item) {
   const blob = await photoBlob(item).catch(() => null);
@@ -866,33 +954,16 @@ $("songSend").onclick = async () => {
   toast(`song sent to ${THEM_NAME} ♪`);
 };
 
-// every song in the gallery's songs tab
-async function openSongs() {
-  const grid = $("grid");
-  $("gallery").classList.add("open");
-  grid.innerHTML = `<div class="empty">finding your songs…</div>`;
+async function loadSongs() {
   const lists = await Promise.all(PEOPLE.map(async to => {
     const r = await gh(`commits?path=song-to-${to}.json&sha=${BRANCH}&per_page=100`).catch(() => null);
     if (!r || !r.ok) return [];
     return (await r.json()).filter(c => c.commit.message.startsWith("song for")).map(c => {
       const [title, url, thumb, ...note] = c.commit.message.split("\n").slice(2);
-      return { to, at: Date.parse(c.commit.committer.date), title, url, thumb, note: note.join(" ") };
+      return { ref: c.sha, to, at: Date.parse(c.commit.committer.date), title, url, thumb, note: note.join(" ") };
     });
   }));
-  const items = lists.flat().filter(x => x.url && x.at >= GALLERY_FROM).sort((a, b) => b.at - a.at);
-  if (galleryTab !== "songs") return;
-  if (!items.length) { grid.innerHTML = `<div class="empty"><span class="big">no songs yet</span>songs you send each other<br>will collect here</div>`; return; }
-  grid.innerHTML = "";
-  for (const s of items) {
-    const b = document.createElement("button"); b.className = "songrow";
-    b.innerHTML = `<img alt=""><div><b></b><i></i><span></span></div>`;
-    b.querySelector("img").src = s.thumb || "icon-180.png?v=4";
-    b.querySelector("b").textContent = s.title || "a song";
-    b.querySelector("i").textContent = s.note;
-    b.querySelector("span").textContent = `${s.to === ME ? `from ${THEM_NAME}` : "from you"} · ${when(s.at)}`;
-    b.onclick = () => showSong(s, s.to === ME ? THEM_NAME : "you");
-    grid.append(b);
-  }
+  return lists.flat().filter(x => x.url && x.at >= GALLERY_FROM);
 }
 
 /* =========================================================
