@@ -6,3 +6,6 @@ purr.m4a: "Cat purring.ogg" by Peter Hull — CC BY-SA 4.0 — https://commons.w
 rain.m4a: "Rain (1).ogg" by ezwa — Public domain — https://commons.wikimedia.org/wiki/File%3ARain_%281%29.ogg
 clock.m4a: "Grandfather Clock Ticking.ogg" by Jud McCranie — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AGrandfather_Clock_Ticking.ogg
 meow.m4a: "Meow of a pleading cat.oga" by Heismark — Public domain — https://commons.wikimedia.org/wiki/File%3AMeow_of_a_pleading_cat.oga
+jazz1.m4a: ""Rose Room Fox Trot" (1917), by Art Hickman.ogg" by Art Hickman — Public domain — https://commons.wikimedia.org/wiki/File%3A%22Rose_Room_Fox_Trot%22_%281917%29%2C_by_Art_Hickman.ogg
+jazz2.m4a: ""The Japanese Sandman" (1920) 1920s dance band music for flappers Harry Raderman's Novelty Orchestra.opus" by Harry Raderman — Public domain — https://commons.wikimedia.org/wiki/File%3A%22The_Japanese_Sandman%22_%281920%29_1920s_dance_band_music_for_flappers_Harry_Raderman%27s_Novelty_Orchestra.opus
+jazz3.m4a: "Riverboat Shuffle - Bix Beiderbecke & Wolverine Orchestra (1924).ogg" by Bix Beiderbecke & Wolverine Orchestra — Public domain — https://commons.wikimedia.org/wiki/File%3ARiverboat_Shuffle_-_Bix_Beiderbecke_%26_Wolverine_Orchestra_%281924%29.ogg

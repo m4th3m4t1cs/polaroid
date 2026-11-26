@@ -706,11 +706,14 @@ const ROOM_SOUNDS = {
   bunk:   [["rain", .6], ["purr", .5]],
   desk:   [["rain", .55], ["purr", .4]],
   cork:   [["rain", .55], ["purr", .4]],
-  vanity: [["rain", .4], ["purr", .5]],
+  vanity: [["rain", .25], ["purr", .4]],
   shelf:  [["rain", .4], ["clock", .3], ["purr", .45]],
 };
 const SOUND_NAME = { fire: "the fire crackling, the cat curled up by it", window: "the old clock ticking, the cat purring by the window", bunk: "rain on the window, the cat purring on the bed",
-  desk: "rain on the window, the cat nearby", cork: "rain on the window, the cat nearby", vanity: "soft rain, the cat purring", shelf: "soft rain, the clock, the cat purring" };
+  desk: "rain on the window, the cat nearby", cork: "rain on the window, the cat nearby", vanity: "an old jazz record, soft rain, the cat purring", shelf: "soft rain, the clock, the cat purring" };
+// the record player by the vanity: 1910s–20s jazz, all public domain
+const RECORDS = [["jazz1", "Rose Room · Art Hickman, 1917"], ["jazz2", "The Japanese Sandman · Harry Raderman, 1920"], ["jazz3", "Riverboat Shuffle · Bix Beiderbecke, 1924"]];
+let recordIx = Math.floor(Math.random() * RECORDS.length);
 const MEOWS = [[3.75, .95], [6.7, .75], [10.15, 1.1]];   // the clearest meows in meow.m4a: [start, length]
 let actx = null, sound = null, meowTimer = null;
 let soundOn = (() => { try { return localStorage.getItem("sound") === "1"; } catch { return false; } })();
@@ -729,6 +732,19 @@ function playRoom(room) {
       s.buffer = buf; s.loop = true; g.gain.value = vol;
       s.connect(g).connect(out); s.start(0, Math.random() * buf.duration); srcs.push(s);
     }).catch(() => {});
+  }
+  if (room === "vanity") {
+    const next = () => {
+      if (!alive) return;
+      const [name, label] = RECORDS[recordIx]; recordIx = (recordIx + 1) % RECORDS.length;
+      loadBuf(name).then(buf => {
+        if (!alive) return;
+        const s = actx.createBufferSource(), g = actx.createGain(); g.gain.value = .75;
+        s.buffer = buf; s.connect(g).connect(out); s.onended = () => setTimeout(next, 2500); s.start(); srcs.push(s);
+        toast(`♪ ${label}`);
+      }).catch(() => {});
+    };
+    next();
   }
   out.gain.linearRampToValueAtTime(1, actx.currentTime + 2);
   return { room, stop() {
