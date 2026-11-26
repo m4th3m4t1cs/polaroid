@@ -188,6 +188,26 @@
   .hint button { position: absolute; top: 6px; right: 6px; background: none; border: 0; padding: 6px 10px; font-size: 18px; color: var(--paper); }
   .who { min-height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; }
   .who .logo { font-size: 54px; }
+  /* gallery */
+  .gallery .grid { width: 100%; max-width: 480px; flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; display: grid; grid-template-columns: 1fr 1fr;
+                   gap: 26px 18px; padding: 22px 8px 40px; align-content: start; }
+  .gallery .empty { grid-column: 1 / -1; text-align: center; color: var(--soft); font-style: italic; padding-top: 30vh; }
+  .gallery .empty .big { display: block; font: 34px/1.2 var(--script); font-style: normal; color: var(--ink); }
+  .item { background: none; border: 0; padding: 0; text-align: center; color: var(--soft); font-size: 14px; }
+  .mini { width: 100%; aspect-ratio: 88 / 107; padding: 6% 6% 0; position: relative; transform: rotate(var(--r, 0deg)); margin-bottom: 8px;
+          background: linear-gradient(172deg, #fdfbf6 0%, #f8f4ec 55%, #efe9df 100%); border-radius: 1.5px;
+          box-shadow: 0 1px 1px rgba(0,0,0,.12), 4px 8px 14px rgba(70,40,20,.2); }
+  .mini .photo { background-color: #d9d0c4; transition: opacity .4s; }
+  .mini .photo.loading { opacity: .5; }
+  .mini .cap { font-size: 19px; left: 6%; right: 6%; }
+  .item b { color: var(--ink); font-weight: 600; }
+  .lightbox { position: fixed; inset: 0; z-index: 25; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+              background: rgba(30,20,14,.72); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); color: #fbf3e6;
+              opacity: 0; pointer-events: none; transition: opacity .3s; }
+  .lightbox.open { opacity: 1; pointer-events: auto; }
+  .lightbox .polaroid { transform: scale(.92) rotate(-1.5deg); transition: transform .35s cubic-bezier(.2,.8,.2,1); }
+  .lightbox.open .polaroid { transform: rotate(-1deg); }
+  .lightbox .meta { color: rgba(255,240,222,.85); margin: 0; }
   [hidden] { display: none !important; }
   @media (prefers-reduced-motion: reduce) { .hang, .bulb { animation: none; } }
 </style>
@@ -199,6 +219,7 @@
     <div class="logo">polaroid</div>
     <div class="right">
       <button class="sent" id="sent" hidden><img id="sentImg" alt=""><span id="sentText"></span></button>
+      <button class="scene-btn" id="galleryBtn" aria-label="Past photos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="4" width="7" height="8.5" rx=".8"/><rect x="13" y="4" width="7" height="8.5" rx=".8"/><rect x="4" y="14.5" width="7" height="5.5" rx=".8"/><rect x="13" y="14.5" width="7" height="5.5" rx=".8"/></svg></button>
       <button class="scene-btn" id="sceneBtn" aria-label="Change room view"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M3 12.5 12 4l9 8.5M5.5 10.5V20h13v-9.5"/><path d="M10 20v-5h4v5"/></svg></button>
     </div>
   </header>
@@ -236,6 +257,15 @@
   </div>
   <div class="filters" id="filters"></div>
   <div class="send" style="grid-template-columns:1fr"><button class="bigbtn primary" id="sendBtn">send</button></div>
+</div>
+
+<div class="sheet gallery" id="gallery">
+  <header><button class="link" id="closeGallery">close</button><div class="title">our photos</div><span style="width:44px"></span></header>
+  <div class="grid" id="grid"></div>
+</div>
+<div class="lightbox" id="lightbox">
+  <div class="polaroid"><div class="photo" id="lbPhoto"></div><div class="cap" id="lbCap"></div></div>
+  <div class="meta"><span id="lbText"></span><button class="round" id="lbSave" aria-label="Save"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 4v11m0 0l-4.5-4.5M12 15l4.5-4.5M5 19.5h14"/></svg></button></div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -364,7 +394,7 @@ async function sendPhoto(blob, caption) {
   });
   const res = await gh(`contents/${path}`, {
     method: "PUT", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ message: `photo for ${THEM}`, content, sha, branch: BRANCH }),
+    body: JSON.stringify({ message: `photo for ${THEM}` + (caption ? `\n\n${caption}` : ""), content, sha, branch: BRANCH }),
   });
   if (!res.ok) throw new Error(`${res.status} ${(await res.json().catch(() => ({}))).message || ""}`);
   const newSha = (await res.json()).content.sha;
@@ -491,13 +521,13 @@ $("heartBtn").onclick = async () => {
   if (navigator.vibrate) navigator.vibrate([12, 40, 12]);
   await putJSON(`heart-to-${THEM}.json`, { sha: received.sha, at: Date.now() }, `heart for ${THEM}`).catch(() => {});
 };
-$("saveBtn").onclick = async () => {
-  if (!received) return;
-  const file = new File([received.blob], "polaroid.jpg", { type: "image/jpeg" });
+async function savePhoto(blob, url) {
+  const file = new File([blob], "polaroid.jpg", { type: "image/jpeg" });
   try { if (navigator.canShare && navigator.canShare({ files: [file] })) return await navigator.share({ files: [file] }); }
   catch (e) { if (e.name === "AbortError") return; }
-  const a = document.createElement("a"); a.href = received.url; a.download = "polaroid.jpg"; a.click();
-};
+  const a = document.createElement("a"); a.href = url; a.download = "polaroid.jpg"; a.click();
+}
+$("saveBtn").onclick = () => { if (received) savePhoto(received.blob, received.url); };
 
 function hearts(from, n = 10) {
   const r = from.getBoundingClientRect(), box = $("hearts");
@@ -615,6 +645,80 @@ $("sendBtn").onclick = async () => {
 };
 
 /* =========================================================
+   Gallery: every photo either of you has sent, rebuilt from the
+   storage history (the hanging one still fades after 24h; this keeps them)
+   ========================================================= */
+const GALLERY_FROM = Date.parse("2026-11-23T18:00:00Z");   // skip the test photos from setup
+async function loadHistory() {
+  const lists = await Promise.all(PEOPLE.map(async to => {
+    const r = await gh(`commits?path=to-${to}.jpg&sha=${BRANCH}&per_page=100`).catch(() => null);
+    if (!r || !r.ok) return [];
+    return (await r.json())
+      .filter(c => c.commit.message.startsWith("photo for"))
+      .map(c => ({ ref: c.sha, to, date: Date.parse(c.commit.committer.date), caption: c.commit.message.split("\n").slice(2).join(" ").trim() }));
+  }));
+  return lists.flat()
+    .filter(x => x.date >= GALLERY_FROM)
+    .filter(x => !(x.to === ME && received && x.date === received.date && !iSaw(received.sha)))   // don't spoil one I haven't developed
+    .sort((a, b) => b.date - a.date);
+}
+const blobs = {};
+async function photoBlob(item) {
+  if (blobs[item.ref]) return blobs[item.ref];
+  const key = `${location.origin}/__gallery/${item.ref}-${item.to}.jpg`;
+  let cache = null;
+  try { cache = await caches.open("polaroid-gallery"); const hit = await cache.match(key); if (hit) return (blobs[item.ref] = await hit.blob()); } catch {}
+  const r = await gh(`contents/to-${item.to}.jpg?ref=${item.ref}`, { headers: { Accept: "application/vnd.github.raw" } });
+  if (!r.ok) throw new Error(r.status);
+  const blob = new Blob([await r.arrayBuffer()], { type: "image/jpeg" });
+  try { if (cache) await cache.put(key, new Response(blob, { headers: { "Content-Type": "image/jpeg" } })); } catch {}
+  return (blobs[item.ref] = blob);
+}
+function when(ms) {
+  const d = new Date(ms), days = Math.floor((new Date().setHours(0, 0, 0, 0) - new Date(ms).setHours(0, 0, 0, 0)) / 864e5);
+  if (days === 0) return "today";
+  if (days === 1) return "yesterday";
+  if (days < 7) return d.toLocaleDateString(undefined, { weekday: "long" }).toLowerCase();
+  return d.toLocaleDateString(undefined, { day: "numeric", month: "short" }).toLowerCase();
+}
+const urls = {};
+async function openGallery() {
+  const grid = $("grid");
+  $("gallery").classList.add("open");
+  grid.innerHTML = `<div class="empty">finding your photos…</div>`;
+  const items = await loadHistory();
+  if (!items.length) { grid.innerHTML = `<div class="empty"><span class="big">nothing here yet</span>every photo you two send<br>will collect here</div>`; return; }
+  grid.innerHTML = "";
+  const queue = items.map((item, i) => {
+    const b = document.createElement("button"); b.className = "item";
+    b.innerHTML = `<div class="mini" style="--r:${((i * 37) % 7 - 3) * 0.6}deg"><div class="photo loading"></div><div class="cap"></div></div>
+      ${item.to === ME ? `from <b>${THEM_NAME}</b>` : "from <b>you</b>"} · ${when(item.date)}`;
+    b.querySelector(".cap").textContent = item.caption;
+    b.onclick = () => showBig(item);
+    grid.append(b);
+    return () => photoBlob(item).then(blob => {
+      urls[item.ref] = urls[item.ref] || URL.createObjectURL(blob);
+      const ph = b.querySelector(".photo"); ph.style.backgroundImage = `url("${urls[item.ref]}")`; ph.classList.remove("loading");
+    }).catch(() => {});
+  });
+  const worker = async () => { while (queue.length) await queue.shift()(); };
+  await Promise.all([worker(), worker(), worker()]);
+}
+async function showBig(item) {
+  const blob = await photoBlob(item).catch(() => null);
+  if (!blob) return toast("couldn't load that one");
+  urls[item.ref] = urls[item.ref] || URL.createObjectURL(blob);
+  $("lbPhoto").style.backgroundImage = `url("${urls[item.ref]}")`;
+  $("lbCap").textContent = item.caption;
+  $("lbText").textContent = `${item.to === ME ? `from ${THEM_NAME}` : "from you"} · ${when(item.date)}, ${new Date(item.date).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }).toLowerCase()}`;
+  $("lbSave").onclick = e => { e.stopPropagation(); savePhoto(blob, urls[item.ref]); };
+  $("lightbox").classList.add("open");
+}
+$("galleryBtn").onclick = openGallery;
+$("closeGallery").onclick = () => $("gallery").classList.remove("open");
+$("lightbox").onclick = e => { if (!e.target.closest(".meta")) $("lightbox").classList.remove("open"); };
+
+/* =========================================================
    Invite link, home-screen hint
    ========================================================= */
 $("forName").textContent = THEM_NAME;
@@ -643,7 +747,7 @@ $("hideHint").onclick = () => { $("hint").hidden = true; try { localStorage.setI
   await Promise.all([refresh(), checkHeart(), checkSeen()]);
   render(); renderSent();
   const update = async () => {
-    if ($("sheet").classList.contains("open")) return;
+    if ($("sheet").classList.contains("open") || $("gallery").classList.contains("open")) return;
     const [changed, loved, saw] = await Promise.all([refresh(), checkHeart(), checkSeen()]);
     if (changed) { render(); if (received && !iSaw(received.sha)) toast(`new photo from ${THEM_NAME}`); }
     else if (received) render();
