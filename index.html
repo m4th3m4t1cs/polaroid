@@ -483,7 +483,7 @@
     box-shadow: inset 0 0 0 .5px rgba(90,60,20,.18); text-shadow: none; color: #3b2a1c; }
   .bigbtn.primary, #sendBtn, #songSend { background: var(--paperbg), linear-gradient(172deg, #f6e4c4 0%, #ecd2a6 100%); }
   .polaroid#card, .lightbox .polaroid, .thing .mini {
-    background: var(--paperbg), linear-gradient(172deg, #fffefa 0%, #fbf8f1 60%, #f3eee4 100%);
+    background: var(--paperbg), linear-gradient(172deg, #fdf5e2 0%, #f8ecd2 60%, #f1e2c2 100%);
     box-shadow: inset 0 0 0 .5px rgba(0,0,0,.08), 0 1px 1px rgba(0,0,0,.14), 4px 12px 26px rgba(40,22,8,.28); }
   .polaroid#card .photo, .lightbox .photo, .thing .mini .photo { filter: none; box-shadow: inset 0 0 0 1px rgba(0,0,0,.12), inset 0 1px 3px rgba(0,0,0,.2); }
   .photo.undeveloped { background-image:
@@ -542,6 +542,9 @@
   .polaroid { width: min(66vw, 360px, 46dvh); }
   .under { width: min(66vw, 360px, 46dvh); }
   .booth { left: calc(50% + min(33vw, 180px, 23dvh) + 6px); }
+  /* every polaroid is warm cream, never grey */
+  .polaroid, .lightbox .polaroid, .thing .mini, .sheet .polaroid { background: var(--paperbg), linear-gradient(172deg, #fdf5e2 0%, #f8ecd2 60%, #f1e2c2 100%); }
+  .polaroid { box-shadow: inset 0 0 0 .5px rgba(120,80,30,.12), 0 1px 1px rgba(60,35,10,.14), 4px 12px 26px rgba(40,22,8,.26); }
 </style>
 </head>
 <body>
