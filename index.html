@@ -701,16 +701,16 @@ applyTimeOfDay(); setInterval(applyTimeOfDay, 5 * 60 * 1000);
    ========================================================= */
 // each room's mix: [recording, volume]
 const ROOM_SOUNDS = {
-  fire:   [["fire", .75], ["firecat", .5]],
-  window: [["wind", .55], ["purr", .16]],
-  bunk:   [["rain", .7], ["purr", .28]],
-  desk:   [["rain", .6], ["purr", .2]],
-  cork:   [["rain", .6], ["purr", .2]],
-  vanity: [["rain", .45], ["purr", .3]],
-  shelf:  [["rain", .45], ["purr", .3]],
+  fire:   [["fire", .7], ["firecat", .6]],
+  window: [["clock", .55], ["purr", .55]],
+  bunk:   [["rain", .6], ["purr", .5]],
+  desk:   [["rain", .55], ["purr", .4]],
+  cork:   [["rain", .55], ["purr", .4]],
+  vanity: [["rain", .4], ["purr", .5]],
+  shelf:  [["rain", .4], ["clock", .3], ["purr", .45]],
 };
-const SOUND_NAME = { fire: "the fire crackling, the cat curled up by it", window: "wind at the window, the cat purring", bunk: "rain on the window, the cat purring on the bed",
-  desk: "rain on the window, the cat nearby", cork: "rain on the window, the cat nearby", vanity: "soft rain, the cat purring", shelf: "soft rain, the cat purring" };
+const SOUND_NAME = { fire: "the fire crackling, the cat curled up by it", window: "the old clock ticking, the cat purring by the window", bunk: "rain on the window, the cat purring on the bed",
+  desk: "rain on the window, the cat nearby", cork: "rain on the window, the cat nearby", vanity: "soft rain, the cat purring", shelf: "soft rain, the clock, the cat purring" };
 const MEOWS = [[3.75, .95], [6.7, .75], [10.15, 1.1]];   // the clearest meows in meow.m4a: [start, length]
 let actx = null, sound = null, meowTimer = null;
 let soundOn = (() => { try { return localStorage.getItem("sound") === "1"; } catch { return false; } })();
