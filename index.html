@@ -271,6 +271,7 @@
   @keyframes wiggle { 25% { transform: rotate(-6deg); } 75% { transform: rotate(6deg); } }
   .hang.jiggle { animation: jiggle .35s ease-out; }
   @keyframes jiggle { 25% { transform: rotate(-5deg) translateX(-4px); } 60% { transform: rotate(4deg) translateX(3px); } }
+  .notifybar { border: 0; text-align: left; font: inherit; padding-right: 16px; cursor: pointer; }
   @media (prefers-reduced-motion: reduce) { .hang, .bulb { animation: none; } }
 </style>
 </head>
@@ -353,13 +354,14 @@
 <div class="nudge" id="nudge"><div><span class="big" id="nudgeText"></span><small id="nudgeWhen"></small></div></div>
 <div class="toast" id="toast"></div>
 <div class="hearts" id="hearts"></div>
+<button class="hint notifybar" id="notifyBar" hidden>🔔 <b>Get a buzz</b> when <span class="themName"></span> sends you something. Tap to turn on.</button>
 <div class="hint" id="hint" hidden>Keep it on your home screen: tap <b>⋯</b> then <b>Share</b>, then <b>Add to Home Screen</b>.<button id="hideHint" aria-label="Close">✕</button></div>
 
 <script>
 /* =========================================================
    Settings
    ========================================================= */
-const REPO = "m4th3m4t1cs/polaroid";   // photos live in this repo…
+const REPO = "m4th3m4t1cs/polaroid-photos";   // photos live in this private repo…
 const BRANCH = "photos";               // …on this branch
 const PEOPLE = ["me", "friend"];       // the two of you (lowercase, no spaces)
 const LIFETIME = 24 * 60 * 60 * 1000;  // photos expire after 24 hours
@@ -370,7 +372,8 @@ const $ = id => document.getElementById(id);
 /* =========================================================
    Who is looking (?me=…)
    ========================================================= */
-const ME = new URLSearchParams(location.search).get("me");
+let ME = new URLSearchParams(location.search).get("me");
+try { if (["me", "friend"].includes(ME)) localStorage.setItem("me", ME); else ME = localStorage.getItem("me"); } catch {}
 if (!PEOPLE.includes(ME)) {
   document.body.innerHTML = `<div class="who"><div class="logo">polaroid</div>who are you?<div class="send" style="width:260px">${
     PEOPLE.map(p => `<button class="bigbtn" onclick="location.search='?me=${p}'">${({ me: "L", friend: "R" })[p]}</button>`).join("")}</div></div>`;
@@ -483,6 +486,7 @@ async function sendPhoto(blob, caption) {
   const newSha = (await res.json()).content.sha;
   await putJSON(`note-to-${THEM}.json`, { sha: newSha, caption: caption || "" }, `note for ${THEM}`).catch(() => {});
   lastSent = { sha: newSha, at: Date.now() }; theyLoved = false;
+  notifyThem("photo", { caption: caption || "" });
   try { localStorage.setItem("last_sent", JSON.stringify(lastSent)); } catch {}
 }
 
@@ -991,6 +995,7 @@ $("songSend").onclick = async () => {
   if (!res || !res.ok) { btn.disabled = false; return toast("couldn't send the song"); }
   $("songSheet").classList.remove("open"); $("songPreviewFrame").src = "about:blank";
   toast(`song sent to ${THEM_NAME} ♪`);
+  notifyThem("song", { title: data.title || "" });
 };
 
 async function loadSongs() {
@@ -1042,7 +1047,41 @@ $("nudgeBtn").onclick = async () => {
   if (Date.now() - nudgeSentAt < 10000) return toast(`${THEM_NAME} knows ♡`);
   nudgeSentAt = Date.now();
   const r = await putJSON(`nudge-to-${THEM}.json`, { at: Date.now() }, `thinking of ${THEM}`).catch(() => null);
-  if (r && r.ok) toast(`sent ${THEM_NAME} a little ♡`); else { nudgeSentAt = 0; toast("couldn't send, try again"); }
+  if (r && r.ok) { toast(`sent ${THEM_NAME} a little ♡`); notifyThem("nudge"); } else { nudgeSentAt = 0; toast("couldn't send, try again"); }
+};
+
+/* =========================================================
+   Phone notifications (through a tiny Cloudflare worker)
+   ========================================================= */
+const PUSH = "%PUSH%";
+const VAPID = "BMYtQ_cEw2CYewxpbCGeGZNfjqkvlthCDeZCV8pkNL83PptZZ3NNbZQnHQ1irR8NbkU70i4Uhh77DNSuTxwHJFs";
+const pushReady = PUSH.startsWith("https://") && "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+let swReg = null;
+async function subscribePush() {
+  if (!swReg) return false;
+  const key = Uint8Array.from(atob(VAPID.replace(/-/g, "+").replace(/_/g, "/")), c => c.charCodeAt(0));
+  const sub = (await swReg.pushManager.getSubscription()) || (await swReg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key }));
+  const r = await fetch(`${PUSH}/subscribe`, { method: "POST", headers: { Authorization: `Bearer ${token()}`, "Content-Type": "application/json" }, body: JSON.stringify({ who: ME, sub }) });
+  return r.ok;
+}
+function notifyThem(kind, extra = {}) {
+  if (!PUSH.startsWith("https://")) return;
+  fetch(`${PUSH}/notify`, { method: "POST", headers: { Authorization: `Bearer ${token()}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ to: THEM, from: ME, kind, ...extra }) }).catch(() => {});
+}
+if (pushReady) {
+  navigator.serviceWorker.register(`sw.js?who=${ME}`).then(reg => {
+    swReg = reg;
+    if (Notification.permission === "granted") subscribePush().catch(() => {});
+    else if (Notification.permission === "default") $("notifyBar").hidden = false;
+  }).catch(() => {});
+}
+$("notifyBar").onclick = async () => {
+  $("notifyBar").hidden = true;
+  const perm = await Notification.requestPermission().catch(() => "denied");
+  if (perm !== "granted") return toast("notifications are off");
+  const ok = await subscribePush().catch(() => false);
+  toast(ok ? "notifications on ♡" : "couldn't turn them on, try again later");
 };
 
 /* =========================================================
