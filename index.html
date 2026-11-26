@@ -208,6 +208,36 @@
   .lightbox .polaroid { transform: scale(.92) rotate(-1.5deg); transition: transform .35s cubic-bezier(.2,.8,.2,1); }
   .lightbox.open .polaroid { transform: rotate(-1deg); }
   .lightbox .meta { color: rgba(255,240,222,.85); margin: 0; }
+  /* songs */
+  .songpill { display: flex; align-items: center; gap: 10px; margin-top: 14px; padding: 5px 16px 5px 5px; border-radius: 999px; border: 0; max-width: 100%;
+              background: rgba(255,250,242,.88); color: var(--ink); font-size: 16px; box-shadow: 0 2px 8px rgba(0,0,0,.18); }
+  .songpill img { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; flex: none; animation: spin 8s linear infinite; }
+  .songpill span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .songpill.new { box-shadow: 0 0 0 2px var(--love), 0 2px 10px rgba(224,86,111,.4); }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .songbtn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; margin-top: 12px; height: 46px; border-radius: 14px; border: 0;
+             background: rgba(255,250,242,.7); color: var(--ink); font-size: 17px; font-weight: 600; box-shadow: 0 2px 8px rgba(60,35,20,.12); }
+  .songbtn svg { width: 20px; height: 20px; }
+  .songcard { width: min(88vw, 400px); background: var(--paper); color: var(--ink); border-radius: 3px; padding: 14px 14px 10px; box-shadow: 0 12px 34px rgba(0,0,0,.35); transform: rotate(-.8deg); }
+  .songcard iframe { display: block; width: 100%; height: 152px; border: 0; border-radius: 12px; background: #282828; }
+  .songcard .note { font: 30px/1.15 var(--script); text-align: center; padding: 12px 4px 2px; min-height: 20px; }
+  .songcard .note:empty { display: none; }
+  .songcard .from { text-align: center; color: var(--soft); font-size: 15px; padding-top: 6px; }
+  .spotify { display: inline-flex; align-items: center; gap: 8px; color: #fbf3e6; font-size: 17px; text-decoration: none; padding: 10px 18px; border-radius: 999px; background: #1db954; font-weight: 600; }
+  .spotify svg { width: 20px; height: 20px; }
+  #songSheet .body { width: 100%; max-width: 480px; display: flex; flex-direction: column; gap: 16px; padding-top: 26px; }
+  #songSheet .steps { color: var(--soft); font-size: 17px; line-height: 1.5; text-align: center; }
+  #songSheet .songcard { width: 100%; transform: none; }
+  #songNote { width: 100%; border: 0; border-bottom: 1px solid rgba(46,38,34,.2); background: none; outline: none; text-align: center; font: 30px/1.3 var(--script); color: var(--ink); padding: 6px 0; }
+  #songNote::placeholder { color: rgba(46,38,34,.3); }
+  .tabs { display: flex; gap: 4px; background: rgba(46,38,34,.07); border-radius: 999px; padding: 3px; margin-top: 12px; }
+  .tabs button { border: 0; background: none; padding: 6px 18px; border-radius: 999px; font-size: 16px; color: var(--soft); }
+  .tabs .on { background: var(--paper); color: var(--ink); font-weight: 600; box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+  .songrow { grid-column: 1 / -1; display: flex; align-items: center; gap: 12px; text-align: left; background: rgba(255,250,242,.75); border: 0; border-radius: 12px; padding: 8px; color: var(--soft); font-size: 14px; }
+  .songrow img { width: 54px; height: 54px; border-radius: 6px; object-fit: cover; flex: none; background: #d9d0c4; }
+  .songrow b { display: block; color: var(--ink); font-size: 17px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .songrow i { display: block; font: 22px/1.1 var(--script); color: var(--ink); }
+  .songrow div { min-width: 0; }
   [hidden] { display: none !important; }
   @media (prefers-reduced-motion: reduce) { .hang, .bulb { animation: none; } }
 </style>
@@ -240,12 +270,14 @@
       <button class="round" id="heartBtn" aria-label="Love it"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20s-7-4.4-9.2-8.6C1.2 8.2 3 4.8 6.4 4.8c2 0 3.4 1.2 4.1 2.4h3c.7-1.2 2.1-2.4 4.1-2.4 3.4 0 5.2 3.4 3.6 6.6C19 15.6 12 20 12 20z" transform="translate(0 0)"/></svg></button>
       <button class="round" id="saveBtn" aria-label="Save"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 4v11m0 0l-4.5-4.5M12 15l4.5-4.5M5 19.5h14"/></svg></button>
     </div>
+    <button class="songpill" id="songPill" hidden><img id="songPillImg" alt=""><span id="songPillText"></span></button>
   </div>
 
   <div class="send">
     <label class="bigbtn primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 8h3l1.6-2.4h6.8L17 8h3v11H4z"/><circle cx="12" cy="13.3" r="3.6"/></svg>take photo<input type="file" accept="image/*" capture="environment" id="camera"></label>
     <label class="bigbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><circle cx="9" cy="10" r="1.8"/><path d="M4 17l5-4.5 4 3.5 3-2.5 4 3.5"/></svg>from photos<input type="file" accept="image/*" id="library"></label>
   </div>
+  <button class="songbtn" id="songBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 18V5.5l11-2V16"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/></svg>send a song</button>
   <div class="foot"><button class="link" id="invite" hidden></button></div>
 </div>
 
@@ -260,12 +292,29 @@
 </div>
 
 <div class="sheet gallery" id="gallery">
-  <header><button class="link" id="closeGallery">close</button><div class="title">our photos</div><span style="width:44px"></span></header>
+  <header><button class="link" id="closeGallery">close</button><div class="title" id="galleryTitle">our photos</div><span style="width:44px"></span></header>
+  <div class="tabs"><button class="on" data-tab="photos">photos</button><button data-tab="songs">songs</button></div>
   <div class="grid" id="grid"></div>
 </div>
 <div class="lightbox" id="lightbox">
   <div class="polaroid"><div class="photo" id="lbPhoto"></div><div class="cap" id="lbCap"></div></div>
   <div class="meta"><span id="lbText"></span><button class="round" id="lbSave" aria-label="Save"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 4v11m0 0l-4.5-4.5M12 15l4.5-4.5M5 19.5h14"/></svg></button></div>
+</div>
+
+<div class="sheet" id="songSheet">
+  <header><button class="link" id="songCancel">cancel</button><div class="title">a song for <span class="themName"></span></div><span style="width:52px"></span></header>
+  <div class="body">
+    <div class="steps" id="songSteps">find a song in Spotify, tap <b>Share</b> → <b>Copy link</b>,<br>then come back here</div>
+    <a class="spotify" id="openSpotify" href="https://open.spotify.com/" target="_blank" rel="noopener" style="align-self:center"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm4.6 14.4a.6.6 0 0 1-.9.2c-2.4-1.5-5.4-1.8-9-1a.6.6 0 1 1-.3-1.2c3.9-.9 7.2-.5 9.9 1.1.3.2.4.6.3.9zm1.2-2.7a.8.8 0 0 1-1 .3c-2.7-1.7-6.9-2.2-10.2-1.2a.8.8 0 1 1-.4-1.5c3.7-1.1 8.4-.6 11.4 1.3.4.2.5.7.2 1.1zm.1-2.8C14.700 9 9.300 8.800 6.200 9.700a.9.9 0 1 1-.5-1.800c3.600-1.100 9.500-.900 13.200 1.300a.9.9 0 0 1-.9 1.600z"/></svg>open Spotify</a>
+    <button class="bigbtn" id="pasteSong">paste the link</button>
+    <div class="songcard" id="songPreview" hidden><iframe id="songPreviewFrame" title="Song preview" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe></div>
+    <input id="songNote" maxlength="40" placeholder="why this one?" enterkeyhint="done" hidden>
+  </div>
+  <div class="send" style="grid-template-columns:1fr"><button class="bigbtn primary" id="songSend" disabled>send</button></div>
+</div>
+<div class="lightbox" id="songView">
+  <div class="songcard"><iframe id="songFrame" title="Song" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"></iframe><div class="note" id="songViewNote"></div><div class="from" id="songViewFrom"></div></div>
+  <a class="spotify" id="songOpen" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm4.6 14.4a.6.6 0 0 1-.9.2c-2.4-1.5-5.4-1.8-9-1a.6.6 0 1 1-.3-1.2c3.9-.9 7.2-.5 9.9 1.1.3.2.4.6.3.9zm1.2-2.7a.8.8 0 0 1-1 .3c-2.7-1.7-6.9-2.2-10.2-1.2a.8.8 0 1 1-.4-1.5c3.7-1.1 8.4-.6 11.4 1.3.4.2.5.7.2 1.1zm.1-2.8C14.700 9 9.300 8.800 6.200 9.700a.9.9 0 1 1-.5-1.800c3.600-1.100 9.500-.900 13.200 1.300a.9.9 0 0 1-.9 1.600z"/></svg>open in Spotify</a>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -682,9 +731,17 @@ function when(ms) {
   return d.toLocaleDateString(undefined, { day: "numeric", month: "short" }).toLowerCase();
 }
 const urls = {};
+let galleryTab = "photos";
+document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => {
+  galleryTab = b.dataset.tab;
+  document.querySelectorAll(".tabs button").forEach(x => x.classList.toggle("on", x === b));
+  $("galleryTitle").textContent = galleryTab === "songs" ? "our songs" : "our photos";
+  galleryTab === "songs" ? openSongs() : openGallery();
+});
 async function openGallery() {
   const grid = $("grid");
   $("gallery").classList.add("open");
+  if (galleryTab === "songs") return openSongs();
   grid.innerHTML = `<div class="empty">finding your photos…</div>`;
   const items = await loadHistory();
   if (!items.length) { grid.innerHTML = `<div class="empty"><span class="big">nothing here yet</span>every photo you two send<br>will collect here</div>`; return; }
@@ -719,9 +776,116 @@ $("closeGallery").onclick = () => $("gallery").classList.remove("open");
 $("lightbox").onclick = e => { if (!e.target.closest(".meta")) $("lightbox").classList.remove("open"); };
 
 /* =========================================================
+   Songs: paste a Spotify link, it shows up on their screen with a player
+   ========================================================= */
+const SPOTIFY = /https?:\/\/(?:open\.spotify\.com\/(?:intl-[a-z-]+\/)?(?:track|album|playlist|episode|artist|show)\/[A-Za-z0-9]+|spotify\.link\/[A-Za-z0-9]+)\S*/;
+const embedUrl = url => { const m = url.match(/open\.spotify\.com\/(?:intl-[a-z-]+\/)?(\w+)\/([A-Za-z0-9]+)/); return m ? `https://open.spotify.com/embed/${m[1]}/${m[2]}` : ""; };
+async function songInfo(url) {
+  try { const r = await fetch(`https://open.spotify.com/oembed?url=${encodeURIComponent(url)}`); if (r.ok) { const j = await r.json(); return { title: j.title || "", thumb: j.thumbnail_url || "", embed: j.iframe_url || embedUrl(url) }; } } catch {}
+  return { title: "", thumb: "", embed: embedUrl(url) };
+}
+
+let song = null;   // the latest song sent to me
+const songSeen = at => { try { return localStorage.getItem("song_seen") === String(at); } catch { return false; } };
+async function checkSong() {
+  const s = await getJSON(`song-to-${ME}.json`);
+  const was = song && song.at; song = s ? s.data : null;
+  return !!(song && song.at !== was && was !== undefined && !songSeen(song.at));
+}
+function renderSong() {
+  const pill = $("songPill");
+  pill.hidden = !song; if (!song) return;
+  const fresh = !songSeen(song.at);
+  pill.classList.toggle("new", fresh);
+  $("songPillImg").src = song.thumb || "icon-180.png?v=4";
+  $("songPillText").textContent = fresh ? `${THEM_NAME} sent you a song ♪` : `${THEM_NAME}'s song: ${song.title || "♪"}`;
+}
+function showSong(s, fromName) {
+  $("songFrame").src = s.embed || embedUrl(s.url);
+  $("songViewNote").textContent = s.note || "";
+  $("songViewFrom").textContent = `from ${fromName} · ${when(s.at)}`;
+  $("songOpen").href = s.url;
+  $("songView").classList.add("open");
+}
+$("songPill").onclick = () => {
+  if (!song) return;
+  try { localStorage.setItem("song_seen", String(song.at)); } catch {}
+  showSong(song, THEM_NAME); renderSong();
+};
+$("songView").onclick = e => { if (e.target === $("songView")) { $("songView").classList.remove("open"); $("songFrame").src = "about:blank"; } };
+
+// sending
+let songDraft = null;
+function resetSongSheet() {
+  songDraft = null; $("songPreview").hidden = true; $("songNote").hidden = true; $("songNote").value = "";
+  $("songSend").disabled = true; $("pasteSong").textContent = "paste the link"; $("songPreviewFrame").src = "about:blank";
+}
+async function useSongLink(text) {
+  const m = (text || "").match(SPOTIFY);
+  if (!m) return toast("that's not a Spotify link");
+  const url = m[0];
+  $("pasteSong").textContent = "loading…";
+  const info = await songInfo(url);
+  songDraft = { url, ...info };
+  $("songPreviewFrame").src = info.embed || "about:blank";
+  $("songPreview").hidden = !info.embed; $("songNote").hidden = false; $("songSend").disabled = false;
+  $("pasteSong").textContent = "paste a different link";
+}
+$("songBtn").onclick = () => { resetSongSheet(); $("songSheet").classList.add("open"); };
+$("songCancel").onclick = () => { $("songSheet").classList.remove("open"); $("songPreviewFrame").src = "about:blank"; };
+$("pasteSong").onclick = async () => {
+  let text = "";
+  try { text = await navigator.clipboard.readText(); } catch {}
+  if (!SPOTIFY.test(text)) text = prompt("Paste the Spotify link:") || "";
+  if (text) useSongLink(text);
+};
+$("songNote").onkeydown = e => { if (e.key === "Enter") e.target.blur(); };
+$("songSend").onclick = async () => {
+  if (!songDraft) return;
+  const btn = $("songSend"); btn.disabled = true; btn.textContent = "sending…";
+  const data = { ...songDraft, note: $("songNote").value.trim(), at: Date.now() };
+  const msg = `song for ${THEM}\n\n${[data.title, data.url, data.thumb, data.note].join("\n")}`;
+  const res = await putJSON(`song-to-${THEM}.json`, data, msg).catch(() => null);
+  btn.textContent = "send";
+  if (!res || !res.ok) { btn.disabled = false; return toast("couldn't send the song"); }
+  $("songSheet").classList.remove("open"); $("songPreviewFrame").src = "about:blank";
+  toast(`song sent to ${THEM_NAME} ♪`);
+};
+
+// every song in the gallery's songs tab
+async function openSongs() {
+  const grid = $("grid");
+  $("gallery").classList.add("open");
+  grid.innerHTML = `<div class="empty">finding your songs…</div>`;
+  const lists = await Promise.all(PEOPLE.map(async to => {
+    const r = await gh(`commits?path=song-to-${to}.json&sha=${BRANCH}&per_page=100`).catch(() => null);
+    if (!r || !r.ok) return [];
+    return (await r.json()).filter(c => c.commit.message.startsWith("song for")).map(c => {
+      const [title, url, thumb, ...note] = c.commit.message.split("\n").slice(2);
+      return { to, at: Date.parse(c.commit.committer.date), title, url, thumb, note: note.join(" ") };
+    });
+  }));
+  const items = lists.flat().filter(x => x.url && x.at >= GALLERY_FROM).sort((a, b) => b.at - a.at);
+  if (galleryTab !== "songs") return;
+  if (!items.length) { grid.innerHTML = `<div class="empty"><span class="big">no songs yet</span>songs you send each other<br>will collect here</div>`; return; }
+  grid.innerHTML = "";
+  for (const s of items) {
+    const b = document.createElement("button"); b.className = "songrow";
+    b.innerHTML = `<img alt=""><div><b></b><i></i><span></span></div>`;
+    b.querySelector("img").src = s.thumb || "icon-180.png?v=4";
+    b.querySelector("b").textContent = s.title || "a song";
+    b.querySelector("i").textContent = s.note;
+    b.querySelector("span").textContent = `${s.to === ME ? `from ${THEM_NAME}` : "from you"} · ${when(s.at)}`;
+    b.onclick = () => showSong(s, s.to === ME ? THEM_NAME : "you");
+    grid.append(b);
+  }
+}
+
+/* =========================================================
    Invite link, home-screen hint
    ========================================================= */
 $("forName").textContent = THEM_NAME;
+document.querySelectorAll(".themName").forEach(e => e.textContent = THEM_NAME);
 if (ME === PEOPLE[0]) {
   $("invite").hidden = false;
   $("invite").textContent = `send R her link`;
@@ -744,11 +908,12 @@ $("hideHint").onclick = () => { $("hint").hidden = true; try { localStorage.setI
    ========================================================= */
 (async () => {
   render(); renderSent();
-  await Promise.all([refresh(), checkHeart(), checkSeen()]);
-  render(); renderSent();
+  await Promise.all([refresh(), checkHeart(), checkSeen(), checkSong()]);
+  render(); renderSent(); renderSong();
   const update = async () => {
-    if ($("sheet").classList.contains("open") || $("gallery").classList.contains("open")) return;
-    const [changed, loved, saw] = await Promise.all([refresh(), checkHeart(), checkSeen()]);
+    if ($("sheet").classList.contains("open") || $("songSheet").classList.contains("open") || $("gallery").classList.contains("open")) return;
+    const [changed, loved, saw, newSong] = await Promise.all([refresh(), checkHeart(), checkSeen(), checkSong()]);
+    renderSong(); if (newSong) toast(`${THEM_NAME} sent you a song ♪`);
     if (changed) { render(); if (received && !iSaw(received.sha)) toast(`new photo from ${THEM_NAME}`); }
     else if (received) render();
     if (loved) toast(`${THEM_NAME} loved your photo ♥`); else if (saw) toast(`${THEM_NAME} saw your photo`);
