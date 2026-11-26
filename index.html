@@ -706,11 +706,11 @@ const ROOM_SOUNDS = {
   bunk:   [["rain", .6], ["purr", .5]],
   desk:   [["rain", .55], ["purr", .4]],
   cork:   [["rain", .55], ["purr", .4]],
-  vanity: [["rain", .25], ["purr", .4]],
-  shelf:  [["rain", .4], ["clock", .3], ["purr", .45]],
+  vanity: [["rain", .15], ["purr", .3]],
+  shelf:  [["clock", .15], ["purr", .3]],
 };
 const SOUND_NAME = { fire: "the fire crackling, the cat curled up by it", window: "the old clock ticking, the cat purring by the window", bunk: "rain on the window, the cat purring on the bed",
-  desk: "rain on the window, the cat nearby", cork: "rain on the window, the cat nearby", vanity: "an old jazz record, soft rain, the cat purring", shelf: "soft rain, the clock, the cat purring" };
+  desk: "rain on the window, the cat nearby", cork: "rain on the window, the cat nearby", vanity: "an old jazz record, soft rain, the cat purring", shelf: "jazz on the record player, the cat purring" };
 // the record player by the vanity: 1910s–20s jazz, all public domain
 const RECORDS = [["jazz1", "Rose Room · Art Hickman, 1917"], ["jazz2", "The Japanese Sandman · Harry Raderman, 1920"], ["jazz3", "Riverboat Shuffle · Bix Beiderbecke, 1924"]];
 let recordIx = Math.floor(Math.random() * RECORDS.length);
@@ -733,13 +733,14 @@ function playRoom(room) {
       s.connect(g).connect(out); s.start(0, Math.random() * buf.duration); srcs.push(s);
     }).catch(() => {});
   }
-  if (room === "vanity") {
+  if (room === "vanity" || room === "shelf") {
+    toast("♪ putting a record on…");
     const next = () => {
       if (!alive) return;
       const [name, label] = RECORDS[recordIx]; recordIx = (recordIx + 1) % RECORDS.length;
       loadBuf(name).then(buf => {
         if (!alive) return;
-        const s = actx.createBufferSource(), g = actx.createGain(); g.gain.value = .75;
+        const s = actx.createBufferSource(), g = actx.createGain(); g.gain.value = 1.4;
         s.buffer = buf; s.connect(g).connect(out); s.onended = () => setTimeout(next, 2500); s.start(); srcs.push(s);
         toast(`♪ ${label}`);
       }).catch(() => {});
