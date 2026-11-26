@@ -545,10 +545,13 @@
   /* every polaroid is warm cream, never grey */
   .polaroid, .lightbox .polaroid, .thing .mini, .sheet .polaroid { background: var(--paperbg), linear-gradient(172deg, #fdf5e2 0%, #f8ecd2 60%, #f1e2c2 100%); }
   .polaroid { box-shadow: inset 0 0 0 .5px rgba(120,80,30,.12), 0 1px 1px rgba(60,35,10,.14), 4px 12px 26px rgba(40,22,8,.26); }
+  /* the back strands sit behind the polaroid and buttons, the main one in front */
+  .string-back { z-index: 0; }
+  .app { position: relative; z-index: 1; }
 </style>
 </head>
 <body>
-<div class="room" id="room"></div><div class="room-shade"></div><div class="tod"></div><div class="beam" id="beam"><i></i><i></i><i></i><b></b></div><canvas class="snow" id="snow"></canvas><div class="leak"></div><svg class="string" id="string" aria-hidden="true"></svg>
+<div class="room" id="room"></div><div class="room-shade"></div><div class="tod"></div><div class="beam" id="beam"><i></i><i></i><i></i><b></b></div><canvas class="snow" id="snow"></canvas><div class="leak"></div><svg class="string string-back" id="stringBack" aria-hidden="true"></svg><svg class="string" id="string" aria-hidden="true"></svg>
 <div class="app" id="app">
   <header>
     <div class="logo">polaroid</div>
@@ -975,80 +978,63 @@ showScene();
    Fairy lights: a real string you can grab, with the polaroid hanging from it
    ========================================================= */
 (function fairyLights() {
-  const svg = $("string"), ns = "http://www.w3.org/2000/svg", hang = document.querySelector(".hang"), peg = document.querySelector(".peg");
-  const el = (tag, attrs, parent = svg) => { const e = document.createElementNS(ns, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); parent.append(e); return e; };
-  svg.innerHTML = `<defs>
+  const front = $("string"), back = $("stringBack"), ns = "http://www.w3.org/2000/svg", hang = document.querySelector(".hang"), peg = document.querySelector(".peg");
+  const el = (tag, attrs, parent) => { const e = document.createElementNS(ns, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); parent.append(e); return e; };
+  front.innerHTML = `<defs>
     <radialGradient id="fl-glow"><stop offset="0" stop-color="#fff1c8" stop-opacity=".95"/><stop offset=".18" stop-color="#ffd27a" stop-opacity=".6"/><stop offset=".45" stop-color="#ffae4a" stop-opacity=".22"/><stop offset="1" stop-color="#ff9030" stop-opacity="0"/></radialGradient>
-    <radialGradient id="fl-halo"><stop offset="0" stop-color="#ffc870" stop-opacity=".32"/><stop offset=".5" stop-color="#ffa850" stop-opacity=".1"/><stop offset="1" stop-color="#ff9030" stop-opacity="0"/></radialGradient>
+    <radialGradient id="fl-halo"><stop offset="0" stop-color="#ffc870" stop-opacity=".3"/><stop offset=".5" stop-color="#ffa850" stop-opacity=".09"/><stop offset="1" stop-color="#ff9030" stop-opacity="0"/></radialGradient>
     <radialGradient id="fl-glass" cx=".45" cy=".42" r=".75"><stop offset="0" stop-color="#ffffff"/><stop offset=".25" stop-color="#fff4cf"/><stop offset=".6" stop-color="#ffd27c"/><stop offset="1" stop-color="#f0a24a"/></radialGradient>
     <linearGradient id="fl-cap" x1="0" x2="1"><stop offset="0" stop-color="#2f3622"/><stop offset=".45" stop-color="#5d6a45"/><stop offset="1" stop-color="#262b1b"/></linearGradient>
     <linearGradient id="fl-wood" x1="0" x2="1"><stop offset="0" stop-color="#c9a274"/><stop offset=".4" stop-color="#ecd6b2"/><stop offset=".6" stop-color="#e2c69c"/><stop offset="1" stop-color="#b98f5f"/></linearGradient></defs>`;
-  const shadow = el("path", { fill: "none", stroke: "none" });
-  const wire = el("path", { fill: "none", stroke: "#3f4a2e", "stroke-width": 2.6, "stroke-linecap": "round" });
-  const twist = el("path", { fill: "none", stroke: "#6f7d52", "stroke-width": 1.3, "stroke-dasharray": "3 3.4", "stroke-linecap": "round" });
-  const hit = el("path", { class: "hit", fill: "none", stroke: "transparent", "stroke-width": 44 });
-  const glows = el("g", { class: "glows" }), bulbsG = el("g", {});
-  const pin = el("g", {});
+  // a vintage glass bulb: ribbed socket, teardrop glass, glowing filament
+  const BULB = `<rect x="-4.6" y="-1" width="9.2" height="11" rx="2" fill="url(#fl-cap)"/>
+    <path d="M-4.6 2.6h9.2M-4.6 5.4h9.2M-4.6 8.2h9.2" stroke="#7c8a5e" stroke-width=".7" opacity=".7"/>
+    <path d="M-5.6 10 C-8.6 16 -7.6 25 0 28.5 C7.6 25 8.6 16 5.6 10 Z" fill="url(#fl-glass)"/>
+    <path d="M-1.6 11 L-1.2 19 M1.6 11 L1.2 19" stroke="#c98a3a" stroke-width=".5" opacity=".7"/>
+    <path d="M-1.2 19 q.6 -1.6 1.2 0 q.6 1.6 1.2 0" stroke="#fffdf2" stroke-width="1.1" fill="none"/>
+    <path d="M-3.4 13 C-4.6 16.5 -4 21 -2 23.5" stroke="#fff" stroke-width="1.2" fill="none" opacity=".75" stroke-linecap="round"/>`;
+
+  function Strand(svg, o) {
+    const S = { o, N: o.n, MID: o.n >> 1, P: [], L: [], bulbs: [], grabbed: -1, gx: 0, gy: 0 };
+    S.g = el("g", { opacity: o.dim || 1 }, svg);
+    S.wire = el("path", { fill: "none", stroke: "#3f4a2e", "stroke-width": 2.6 * (o.wireScale || 1), "stroke-linecap": "round" }, S.g);
+    S.twist = el("path", { fill: "none", stroke: "#6f7d52", "stroke-width": 1.3 * (o.wireScale || 1), "stroke-dasharray": "3 3.4", "stroke-linecap": "round" }, S.g);
+    if (o.grab) S.hit = el("path", { class: "hit", fill: "none", stroke: "transparent", "stroke-width": 44 }, S.g);
+    S.glows = el("g", { class: "glows" }, S.g); S.bulbsG = el("g", {}, S.g);
+    return S;
+  }
+  // three strands: two draped behind the polaroid, the main one holding it
+  const backs = [
+    Strand(back, { n: 30, sag: 125, every: 2, scale: .66, dim: .9, ly: -52, ry: 4, wireScale: .8 }),
+    Strand(back, { n: 30, sag: 85, every: 2, scale: .6, dim: .8, ly: 6, ry: -48, wireScale: .75 }),
+  ];
+  const main = Strand(front, { n: 34, sag: 58, every: 1, scale: .82, grab: true, card: true });
+  const strands = [...backs, main];
+  const pin = el("g", {}, front);
   pin.innerHTML = `<rect x="-6.5" y="-12" width="13" height="38" rx="2" fill="url(#fl-wood)" stroke="rgba(90,60,30,.4)" stroke-width=".6"/>
     <path d="M0 -12 V26" stroke="rgba(90,60,30,.45)" stroke-width=".8"/><rect x="-8" y="2" width="16" height="5" rx="2.5" fill="#9ca0a6"/>
     <path d="M-7 3.2h14M-7 4.6h14M-7 6h14" stroke="#62666c" stroke-width=".5"/>`;
 
-  const N = 34, MID = N >> 1;
-  let P = [], L = [], W = 0, restMid = null, grabbed = -1, gx = 0, gy = 0, running = false, quietFor = 0;
-  let th = 0, om = 0, lastVx = 0;   // the polaroid's swing
-  const bulbs = [];
-  function build() {
-    W = document.documentElement.clientWidth;
-    hang.style.transform = "";
-    const r = peg.getBoundingClientRect(), px = r.left + r.width / 2 + scrollX, py = r.top + 6 + scrollY;
-    const left = -30, right = W + 30, sag = 58;
-    P = []; L = [];
-    for (let i = 0; i < N; i++) {
-      const t = i / (N - 1), x = left + (right - left) * t;
-      const y = (py - sag) + sag * (1 - Math.pow(2 * t - 1, 2)) * 1.08;
-      P.push({ x, y, ox: x, oy: y });
-    }
-    for (let i = 0; i < N - 1; i++) L.push(Math.hypot(P[i + 1].x - P[i].x, P[i + 1].y - P[i].y) * 1.05);
-    for (let k = 0; k < 500; k++) step(1);   // let it settle before showing it
-    const dx = px - P[MID].x, dy = py - P[MID].y;
-    for (const p of P) { p.x += dx; p.y += dy; p.ox = p.x; p.oy = p.y; }
-    restMid = { x: P[MID].x, y: P[MID].y };
-    svg.setAttribute("height", document.documentElement.scrollHeight);
-    glows.innerHTML = ""; bulbsG.innerHTML = ""; bulbs.length = 0;
-    for (let i = 2; i < N - 2; i++) {
-      if (Math.abs(i - MID) < 2 || i % 3) continue;
-      const halo = el("circle", { r: 60, fill: "url(#fl-halo)", class: "glowc" }, glows);
-      const g = el("circle", { r: 26, fill: "url(#fl-glow)", class: "glowc" }, glows);
-      const b = el("g", {}, bulbsG);
-      // a vintage glass bulb: ribbed socket, teardrop glass, glowing filament
-      b.innerHTML = `<rect x="-4.6" y="-1" width="9.2" height="11" rx="2" fill="url(#fl-cap)"/>
-        <path d="M-4.6 2.6h9.2M-4.6 5.4h9.2M-4.6 8.2h9.2" stroke="#7c8a5e" stroke-width=".7" opacity=".7"/>
-        <path d="M-5.6 10 C-8.6 16 -7.6 25 0 28.5 C7.6 25 8.6 16 5.6 10 Z" fill="url(#fl-glass)"/>
-        <path d="M-1.6 11 L-1.2 19 M1.6 11 L1.2 19" stroke="#c98a3a" stroke-width=".5" opacity=".7"/>
-        <path d="M-1.2 19 q.6 -1.6 1.2 0 q.6 1.6 1.2 0" stroke="#fffdf2" stroke-width="1.1" fill="none"/>
-        <path d="M-3.4 13 C-4.6 16.5 -4 21 -2 23.5" stroke="#fff" stroke-width="1.2" fill="none" opacity=".75" stroke-linecap="round"/>`;
-      bulbs.push({ i, g, halo, b, f: .5 + Math.random() * 1.1, ph: Math.random() * 6.28 });
-    }
-    draw(performance.now());
-  }
-  function step(heavy) {
+  let restMid = null, running = false, quietFor = 0, th = 0, om = 0, lastVx = 0;
+  function step(S) {
+    const { P, L, N, MID, o } = S;
     for (let i = 1; i < N - 1; i++) {
-      const p = P[i]; if (i === grabbed) continue;
+      const p = P[i]; if (i === S.grabbed) continue;
       const vx = (p.x - p.ox) * .972, vy = (p.y - p.oy) * .972;
       p.ox = p.x; p.oy = p.y;
-      p.x += vx; p.y += vy + (i === MID ? 1.1 : .5);
+      p.x += vx; p.y += vy + (o.card && i === MID ? 1.1 : .5);
     }
-    if (grabbed > 0) {
+    if (S.grabbed > 0) {
       // a string can't stretch: keep the grabbed point within reach of both ends
-      let nx = P[grabbed].x + (gx - P[grabbed].x) * .5, ny = P[grabbed].y + (gy - P[grabbed].y) * .5;
-      let reachL = 0, reachR = 0; for (let i = 0; i < grabbed; i++) reachL += L[i]; for (let i = grabbed; i < N - 1; i++) reachR += L[i];
+      let nx = P[S.grabbed].x + (S.gx - P[S.grabbed].x) * .5, ny = P[S.grabbed].y + (S.gy - P[S.grabbed].y) * .5;
+      let reachL = 0, reachR = 0; for (let i = 0; i < S.grabbed; i++) reachL += L[i]; for (let i = S.grabbed; i < N - 1; i++) reachR += L[i];
       for (let k = 0; k < 3; k++) for (const [A, R] of [[P[0], reachL * 1.03], [P[N - 1], reachR * 1.03]]) {
         const dx = nx - A.x, dy = ny - A.y, d = Math.hypot(dx, dy);
         if (d > R) { nx = A.x + dx / d * R; ny = A.y + dy / d * R; }
       }
-      const p = P[grabbed]; p.ox = p.x; p.oy = p.y; p.x = nx; p.y = ny;
+      const p = P[S.grabbed]; p.ox = p.x; p.oy = p.y; p.x = nx; p.y = ny;
     }
-    const fixed = i => i === 0 || i === N - 1 || i === grabbed;
+    const fixed = i => i === 0 || i === N - 1 || i === S.grabbed;
     for (let k = 0; k < 14; k++) for (let i = 0; i < N - 1; i++) {
       const a = P[i], b = P[i + 1], dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 1, diff = (d - L[i]) / d;
       const fa = fixed(i) ? 0 : 1, fb = fixed(i + 1) ? 0 : 1, sum = fa + fb;
@@ -1057,54 +1043,89 @@ showScene();
       b.x -= dx * diff * fb / sum; b.y -= dy * diff * fb / sum;
     }
   }
-  const curve = () => { let d = `M${P[0].x} ${P[0].y}`; for (let i = 1; i < N - 1; i++) { const mx = (P[i].x + P[i + 1].x) / 2, my = (P[i].y + P[i + 1].y) / 2; d += ` Q${P[i].x} ${P[i].y} ${mx} ${my}`; } return d + ` L${P[N - 1].x} ${P[N - 1].y}`; };
-  function draw(t) {
-    const d = curve();
-    wire.setAttribute("d", d); twist.setAttribute("d", d); hit.setAttribute("d", d);
-    shadow.setAttribute("d", d); shadow.setAttribute("transform", "translate(3 11)");
-    for (const B of bulbs) {
-      const a = P[B.i], n = P[B.i + 1], ang = Math.atan2(n.y - a.y, n.x - a.x) * 57.3;
-      const tilt = ang * .25 + (a.x - a.ox) * 5;
-      B.b.setAttribute("transform", `translate(${a.x} ${a.y}) rotate(${tilt})`);
-      const gx = a.x - Math.sin(tilt / 57.3) * 20, gy = a.y + Math.cos(tilt / 57.3) * 20;
-      B.g.setAttribute("cx", gx); B.g.setAttribute("cy", gy); B.halo.setAttribute("cx", gx); B.halo.setAttribute("cy", gy);
-      B.g.style.opacity = "";
-      const flick = Math.sin(t / 1000 * B.f + B.ph);
-      B.g.setAttribute("r", 25 + 2.5 * flick); B.halo.style.opacity = .85 + .15 * flick;
+  function build() {
+    const W = document.documentElement.clientWidth;
+    hang.style.transform = "";
+    const r = peg.getBoundingClientRect(), px = r.left + r.width / 2 + scrollX, py = r.top + 6 + scrollY;
+    const top = py - main.o.sag;
+    let shift = null;
+    for (const S of [main, ...backs]) {
+      const { N, o } = S, left = -30, right = W + 30, yl = top + (o.ly || 0), yr = top + (o.ry || 0);
+      S.P = []; S.L = []; S.grabbed = -1;
+      for (let i = 0; i < N; i++) {
+        const t = i / (N - 1), x = left + (right - left) * t, y = yl + (yr - yl) * t + o.sag * (1 - Math.pow(2 * t - 1, 2)) * 1.08;
+        S.P.push({ x, y, ox: x, oy: y });
+      }
+      for (let i = 0; i < N - 1; i++) S.L.push(Math.hypot(S.P[i + 1].x - S.P[i].x, S.P[i + 1].y - S.P[i].y) * 1.05);
+      for (let k = 0; k < 500; k++) step(S);   // let it settle before showing it
+      if (!shift) shift = { x: px - S.P[S.MID].x, y: py - S.P[S.MID].y };   // the main strand meets the clothespin
+      for (const p of S.P) { p.x += shift.x; p.y += shift.y; p.ox = p.x; p.oy = p.y; }
+      S.glows.innerHTML = ""; S.bulbsG.innerHTML = ""; S.bulbs = [];
+      for (let i = 2; i < N - 2; i++) {
+        if ((o.card && Math.abs(i - S.MID) < 2) || i % o.every) continue;
+        const halo = el("circle", { r: 60 * o.scale, fill: "url(#fl-halo)", class: "glowc" }, S.glows);
+        const g = el("circle", { r: 26 * o.scale, fill: "url(#fl-glow)", class: "glowc" }, S.glows);
+        const b = el("g", {}, S.bulbsG); b.innerHTML = BULB;
+        S.bulbs.push({ i, g, halo, b, f: .5 + Math.random() * 1.1, ph: Math.random() * 6.28 });
+      }
     }
-    // the polaroid swings from the middle of the string, like a pendulum
-    const m = P[MID], vx = m.x - m.ox, ax = vx - lastVx; lastVx = vx;
-    om += (-.0065 * Math.sin(th) - ax * .012 * Math.cos(th)) ; om *= .985; th += om;
-    const dx = Math.max(-90, Math.min(90, m.x - restMid.x)), dy = Math.max(-26, Math.min(150, m.y - restMid.y));
+    restMid = { x: main.P[main.MID].x, y: main.P[main.MID].y };
+    for (const svg of [front, back]) svg.setAttribute("height", document.documentElement.scrollHeight);
+    draw(performance.now());
+  }
+  const curve = P => { const N = P.length; let d = `M${P[0].x} ${P[0].y}`; for (let i = 1; i < N - 1; i++) { const mx = (P[i].x + P[i + 1].x) / 2, my = (P[i].y + P[i + 1].y) / 2; d += ` Q${P[i].x} ${P[i].y} ${mx} ${my}`; } return d + ` L${P[N - 1].x} ${P[N - 1].y}`; };
+  function draw(t) {
+    for (const S of strands) {
+      const d = curve(S.P), sc = S.o.scale;
+      S.wire.setAttribute("d", d); S.twist.setAttribute("d", d); if (S.hit) S.hit.setAttribute("d", d);
+      for (const B of S.bulbs) {
+        const a = S.P[B.i], n = S.P[B.i + 1], ang = Math.atan2(n.y - a.y, n.x - a.x) * 57.3;
+        const tilt = ang * .25 + (a.x - a.ox) * 5;
+        B.b.setAttribute("transform", `translate(${a.x} ${a.y}) rotate(${tilt}) scale(${sc})`);
+        const gx = a.x - Math.sin(tilt / 57.3) * 20 * sc, gy = a.y + Math.cos(tilt / 57.3) * 20 * sc;
+        B.g.setAttribute("cx", gx); B.g.setAttribute("cy", gy); B.halo.setAttribute("cx", gx); B.halo.setAttribute("cy", gy);
+        const flick = Math.sin(t / 1000 * B.f + B.ph);
+        B.g.setAttribute("r", (25 + 2.5 * flick) * sc); B.halo.style.opacity = .85 + .15 * flick;
+      }
+    }
+    // the polaroid swings from the middle of the main strand, like a pendulum
+    const m = main.P[main.MID], vx = m.x - m.ox, ax = vx - lastVx; lastVx = vx;
+    om += -.0065 * Math.sin(th) - ax * .012 * Math.cos(th); om *= .985; th += om;
     th = Math.max(-.6, Math.min(.6, th));
+    const dx = Math.max(-90, Math.min(90, m.x - restMid.x)), dy = Math.max(-26, Math.min(150, m.y - restMid.y));
     hang.style.transform = `translate(${dx}px, ${dy}px) rotate(${th * 57.3}deg)`;
     pin.setAttribute("transform", `translate(${m.x} ${m.y - 6}) rotate(${th * 57.3})`);
   }
   function loop(t) {
-    step(); draw(t);
-    let e = Math.abs(om) * 40; for (const p of P) e += Math.abs(p.x - p.ox) + Math.abs(p.y - p.oy);
-    quietFor = e < .25 && grabbed < 0 ? quietFor + 1 : 0;
+    let e = Math.abs(om) * 40;
+    for (const S of strands) { step(S); for (const p of S.P) e += Math.abs(p.x - p.ox) + Math.abs(p.y - p.oy); }
+    draw(t);
+    quietFor = e < .4 && main.grabbed < 0 ? quietFor + 1 : 0;
     if (quietFor > 90) { running = false; return; }   // asleep until touched again
     requestAnimationFrame(loop);
   }
   const wake = () => { quietFor = 0; if (!running) { running = true; requestAnimationFrame(loop); } };
   const pt = e => ({ x: e.clientX + scrollX, y: e.clientY + scrollY });
+  const hit = main.hit;
   hit.addEventListener("pointerdown", e => {
-    e.preventDefault(); const q = pt(e);
-    let best = 1, bd = 1e9; for (let i = 1; i < N - 1; i++) { const d = Math.hypot(P[i].x - q.x, P[i].y - q.y); if (d < bd) { bd = d; best = i; } }
-    grabbed = best; gx = q.x; gy = q.y; hit.setPointerCapture(e.pointerId); hit.style.cursor = "grabbing"; wake();
+    e.preventDefault(); const q = pt(e), P = main.P;
+    let best = 1, bd = 1e9; for (let i = 1; i < main.N - 1; i++) { const d = Math.hypot(P[i].x - q.x, P[i].y - q.y); if (d < bd) { bd = d; best = i; } }
+    main.grabbed = best; main.gx = q.x; main.gy = q.y; hit.setPointerCapture(e.pointerId); hit.style.cursor = "grabbing";
+    for (const S of backs) S.P[Math.floor(S.N * best / main.N)].ox -= (Math.random() - .5) * 3;   // the others jiggle too
+    wake();
   });
-  hit.addEventListener("pointermove", e => { if (grabbed < 0) return; const q = pt(e); gx = q.x; gy = Math.min(q.y, restMid.y + 160); });
-  const drop = () => { grabbed = -1; hit.style.cursor = ""; wake(); };
+  hit.addEventListener("pointermove", e => { if (main.grabbed < 0) return; const q = pt(e); main.gx = q.x; main.gy = Math.min(q.y, restMid.y + 160); });
+  const drop = () => { main.grabbed = -1; hit.style.cursor = ""; wake(); };
   hit.addEventListener("pointerup", drop); hit.addEventListener("pointercancel", drop);
   // a soft draught now and then, so it never looks frozen
-  setInterval(() => { if (document.hidden || grabbed >= 0 || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const i = 2 + Math.floor(Math.random() * (N - 4)); P[i].ox -= (Math.random() - .5) * 1.6; om += (Math.random() - .5) * .004; wake(); }, 6500);
+  setInterval(() => { if (document.hidden || main.grabbed >= 0 || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    for (const S of strands) { const i = 2 + Math.floor(Math.random() * (S.N - 4)); S.P[i].ox -= (Math.random() - .5) * 1.6; }
+    om += (Math.random() - .5) * .004; wake(); }, 6500);
   // twinkle without keeping the whole simulation awake
-  setInterval(() => { if (!running && !document.hidden) draw(performance.now()); }, 120);
+  setInterval(() => { if (!running && !document.hidden) draw(performance.now()); }, 150);
   let rt; addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { build(); wake(); }, 150); });
   requestAnimationFrame(() => { build(); wake(); });
-  window.__swing = () => { P[MID].ox -= 14; wake(); };   // a nudge, used when the polaroid is tapped
+  window.__swing = () => { main.P[main.MID].ox -= 14; wake(); };
 })();
 
 (function drawLights() {
