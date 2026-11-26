@@ -603,6 +603,10 @@
   .booth .shot { flex: 0 0 46px; height: 46px; width: 40px; aspect-ratio: auto; min-height: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; line-height: 1; }
   .booth .shot i { display: block; line-height: 1; max-width: 40px; white-space: nowrap; }
   .booth .seal { width: 34px; height: 34px; flex: none; }
+  /* the polaroid sways gently from its clothespin, on its own (smooth, GPU-driven) */
+  .polaroid#card { transform-origin: 50% -14px; animation: cardsway 8s cubic-bezier(.45,.05,.55,.95) infinite; will-change: transform; }
+  @keyframes cardsway { 0%, 100% { transform: rotate(-1.3deg); } 50% { transform: rotate(1.3deg); } }
+  @media (prefers-reduced-motion: reduce) { .polaroid#card { animation: none; } }
 </style>
 </head>
 <body>
@@ -1117,7 +1121,7 @@ showScene();
     Strand(back, { n: 30, sag: 125, every: 2, scale: .66, dim: .9, ly: -52, ry: 4, wireScale: .8 }),
     Strand(back, { n: 30, sag: 85, every: 2, scale: .6, dim: .8, ly: 6, ry: -48, wireScale: .75 }),
   ];
-  const main = Strand(front, { n: 34, sag: 58, every: 2, scale: .82, grab: true, card: true });
+  const main = Strand(front, { n: 34, sag: 58, every: 2, scale: .82, card: true });
   const strands = [...backs, main];
   const pin = el("g", {}, front);
   pin.innerHTML = `<rect x="-6.5" y="-12" width="13" height="38" rx="2" fill="url(#fl-wood)" stroke="rgba(90,60,30,.4)" stroke-width=".6"/>
@@ -1202,8 +1206,8 @@ showScene();
     om += -.0065 * Math.sin(th) - ax * .012 * Math.cos(th); om *= .985; th += om;
     th = Math.max(-.6, Math.min(.6, th));
     const dx = Math.max(-90, Math.min(90, m.x - restMid.x)), dy = Math.max(-26, Math.min(150, m.y - restMid.y));
-    hang.style.transform = `translate(${dx}px, ${dy}px) rotate(${th * 57.3}deg)`;
-    pin.setAttribute("transform", `translate(${m.x} ${m.y - 6}) rotate(${th * 57.3})`);
+    hang.style.transform = `translate(${dx.toFixed(2)}px, ${dy.toFixed(2)}px)`;
+    pin.setAttribute("transform", `translate(${m.x} ${m.y - 6})`);
   }
   function loop(t) {
     let e = Math.abs(om) * 40;
@@ -1216,20 +1220,20 @@ showScene();
   const wake = () => { quietFor = 0; if (!running) { running = true; requestAnimationFrame(loop); } };
   const pt = e => ({ x: e.clientX + scrollX, y: e.clientY + scrollY });
   const hit = main.hit;
-  hit.addEventListener("pointerdown", e => {
+  if (hit) hit.addEventListener("pointerdown", e => {
     e.preventDefault(); const q = pt(e), P = main.P;
     let best = 1, bd = 1e9; for (let i = 1; i < main.N - 1; i++) { const d = Math.hypot(P[i].x - q.x, P[i].y - q.y); if (d < bd) { bd = d; best = i; } }
     main.grabbed = best; main.gx = q.x; main.gy = q.y; hit.setPointerCapture(e.pointerId); hit.style.cursor = "grabbing";
     for (const S of backs) S.P[Math.floor(S.N * best / main.N)].ox -= (Math.random() - .5) * 3;   // the others jiggle too
     wake();
   });
-  hit.addEventListener("pointermove", e => { if (main.grabbed < 0) return; const q = pt(e); main.gx = q.x; main.gy = Math.min(q.y, restMid.y + 160); });
+  if (hit) hit.addEventListener("pointermove", e => { if (main.grabbed < 0) return; const q = pt(e); main.gx = q.x; main.gy = Math.min(q.y, restMid.y + 160); });
   const drop = () => { main.grabbed = -1; hit.style.cursor = ""; wake(); };
-  hit.addEventListener("pointerup", drop); hit.addEventListener("pointercancel", drop);
+  if (hit) { hit.addEventListener("pointerup", drop); hit.addEventListener("pointercancel", drop); }
   // a soft draught now and then, so it never looks frozen
   setInterval(() => { if (document.hidden || main.grabbed >= 0 || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    for (const S of strands) { const i = 2 + Math.floor(Math.random() * (S.N - 4)); S.P[i].ox -= (Math.random() - .5) * 1.6; }
-    om += (Math.random() - .5) * .004; wake(); }, 6500);
+    for (const S of backs) { const i = 2 + Math.floor(Math.random() * (S.N - 4)); S.P[i].ox -= (Math.random() - .5) * .8; }
+    wake(); }, 6500);
   // twinkle without keeping the whole simulation awake
   setInterval(() => { if (!running && !document.hidden) draw(performance.now()); }, 150);
   let rt; addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { build(); wake(); }, 150); });
