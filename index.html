@@ -567,6 +567,22 @@
                    radial-gradient(ellipse at 38% 28%, #f1e0c4, #c9a37a 70%); }
   .booth .shot:first-child i { font-size: 11.5px; }
   .hearts .waxh { display: block; }
+  /* the candle: lit while you're both here */
+  .candle { position: absolute; z-index: 3; top: 50%; right: calc(50% + min(33vw, 180px, 23dvh) + 4px); width: 46px; transform: translateY(-30%); pointer-events: none; text-align: center; }
+  .candle svg { width: 100%; display: block; overflow: visible; filter: drop-shadow(2px 6px 6px rgba(40,22,8,.35)); }
+  .candle .flame, .candle .cglow { opacity: 0; transition: opacity 1.2s; transform-origin: 30px 46px; }
+  .candle .smoke { opacity: 0; }
+  .candle.lit .flame { opacity: 1; animation: flame .18s ease-in-out infinite alternate; }
+  .candle.lit .cglow { opacity: 1; animation: cglow 2.4s ease-in-out infinite alternate; }
+  .candle.out .smoke { animation: smoke 2.6s ease-out forwards; }
+  @keyframes flame { from { transform: scale(1, 1) skewX(-2deg); } to { transform: scale(.94, 1.06) skewX(2.5deg); } }
+  @keyframes cglow { from { transform: scale(1); } to { transform: scale(1.08); } }
+  @keyframes smoke { 0% { opacity: .8; stroke-dasharray: 0 60; } 60% { opacity: .5; stroke-dasharray: 60 0; } 100% { opacity: 0; transform: translateY(-14px); } }
+  .candle .clabel { display: block; margin-top: 4px; font: 400 15px/1.05 "Pinyon Script", var(--script); color: #fff6e6; text-shadow: 0 1px 4px rgba(40,20,5,.7); opacity: 0; transition: opacity 1s; white-space: nowrap; margin-left: -20px; margin-right: -20px; }
+  .candle.lit .clabel { opacity: 1; }
+  .string.shimmer .glows { animation: shimmer 1.6s ease-in-out 2; }
+  @keyframes shimmer { 0%, 100% { opacity: 1; } 25% { opacity: .35; } 50% { opacity: 1; } 75% { opacity: .5; } }
+  @media (prefers-reduced-motion: reduce) { .candle.lit .flame, .candle.lit .cglow { animation: none; } }
 </style>
 </head>
 <body>
@@ -583,6 +599,28 @@
   </header>
 
   <div class="stage">
+    <div class="candle" id="candle" aria-live="polite">
+      <svg viewBox="0 0 60 130" aria-hidden="true">
+        <defs>
+          <radialGradient id="cd-glow"><stop offset="0" stop-color="#ffd890" stop-opacity=".75"/><stop offset=".4" stop-color="#ffb760" stop-opacity=".25"/><stop offset="1" stop-color="#ff9a40" stop-opacity="0"/></radialGradient>
+          <radialGradient id="cd-flame" cx=".5" cy=".75" r=".7"><stop offset="0" stop-color="#fffdf0"/><stop offset=".35" stop-color="#ffe9a0"/><stop offset=".75" stop-color="#ffb347"/><stop offset="1" stop-color="#ff8a2a" stop-opacity=".2"/></radialGradient>
+          <linearGradient id="cd-wax" x1="0" x2="1"><stop offset="0" stop-color="#eadcc4"/><stop offset=".35" stop-color="#fbf4e6"/><stop offset=".7" stop-color="#f4e9d4"/><stop offset="1" stop-color="#d9c7a8"/></linearGradient>
+          <linearGradient id="cd-brass" x1="0" x2="1"><stop offset="0" stop-color="#8a6a32"/><stop offset=".4" stop-color="#e3c27a"/><stop offset=".6" stop-color="#c9a35a"/><stop offset="1" stop-color="#7a5a26"/></linearGradient>
+        </defs>
+        <circle class="cglow" cx="30" cy="40" r="34" fill="url(#cd-glow)"/>
+        <path class="smoke" d="M30 44 C26 36 34 30 29 22 C25 15 33 10 30 2" stroke="rgba(230,225,215,.55)" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+        <g class="flame"><path d="M30 26 C25 34 24.5 41 30 46 C35.5 41 35 34 30 26 Z" fill="url(#cd-flame)"/><path d="M30 37 C28.4 40 28.6 43 30 45 C31.4 43 31.6 40 30 37 Z" fill="#7fa8ff" opacity=".45"/></g>
+        <path d="M30 44 V49" stroke="#3a2a1c" stroke-width="1.3" stroke-linecap="round"/>
+        <path d="M21 50 C21 48.6 25 48 30 48 C35 48 39 48.6 39 50 V104 H21 Z" fill="url(#cd-wax)"/>
+        <path d="M24 50 C24 55 23 58 23.6 61 C24.2 63 25.4 61 25.6 57 C25.8 53 26.4 51 27 50" fill="#fbf4e6"/>
+        <path d="M35.5 50 C35.6 53 36 55 35.4 57" stroke="#e3d4b8" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+        <ellipse cx="30" cy="50" rx="9" ry="2.2" fill="#f7eedc"/>
+        <path d="M10 104 Q30 98 50 104 L48 112 Q30 116 12 112 Z" fill="url(#cd-brass)"/>
+        <path d="M50 106 C58 104 60 112 52 114" stroke="url(#cd-brass)" stroke-width="3" fill="none"/>
+        <ellipse cx="30" cy="104" rx="20" ry="3.4" fill="#e9cc8a" opacity=".55"/>
+      </svg>
+      <span class="clabel" id="candleLabel"></span>
+    </div>
     <button class="booth" id="nudgeBtn" aria-label="Thinking of you">
       <span class="shot"><i>thinking</i></span><span class="shot"><i>of</i></span><span class="shot"><i>you</i></span><span class="shot sealshot"><span class="seal" aria-hidden="true"><svg viewBox="0 0 40 40"><defs><radialGradient id="wax" cx=".38" cy=".32" r=".75"><stop offset="0" stop-color="#d4505a"/><stop offset=".55" stop-color="#a8243a"/><stop offset="1" stop-color="#6e1222"/></radialGradient></defs>
 <path class="half l" d="M20 2.5 C14 1.8 9.5 3.5 6.6 6.8 C3.2 9.4 2 13.6 2.6 17.5 C1.4 21.6 2.6 26 5.6 29 C7.4 33.4 11.4 36.6 16 37.2 C17.4 37.6 18.8 37.7 20 37.6 L19 31 L21.2 25 L18.6 19 L21 13 L19.2 7.5 Z" fill="url(#wax)"/>
@@ -1803,6 +1841,35 @@ $("notifyBar").onclick = async () => {
   const ok = await subscribePush().catch(() => false);
   toast(ok ? "notifications on ♡" : "couldn't turn them on, try again later");
 };
+
+/* =========================================================
+   "R is here too": a candle that lights while you both have the app open
+   ========================================================= */
+let together = null;
+async function checkIn() {
+  if (document.hidden || !PUSH.startsWith("https://")) return;
+  const r = await fetch(`${PUSH}/here`, { method: "POST", headers: { Authorization: `Bearer ${token()}`, "Content-Type": "application/json" }, body: JSON.stringify({ who: ME }) }).catch(() => null);
+  if (!r || !r.ok) return;
+  const j = await r.json().catch(() => ({}));
+  setTogether(j.otherAgo !== null && j.otherAgo !== undefined && j.otherAgo < 150000);
+}
+function setTogether(on) {
+  const c = $("candle");
+  if (on === together) return;
+  const first = together === null; together = on;
+  c.classList.toggle("lit", on); c.classList.toggle("out", !on && !first);
+  $("candleLabel").textContent = on ? `${THEM_NAME}'s here` : "";
+  if (on) {
+    toast(`${THEM_NAME} is here too ♡`);
+    document.querySelectorAll(".string").forEach(sv => { sv.classList.remove("shimmer"); void sv.getBoundingClientRect(); sv.classList.add("shimmer"); });
+    if (window.__swing) window.__swing();
+  }
+}
+checkIn(); setInterval(checkIn, 60000);
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) return checkIn();
+  if (PUSH.startsWith("https://")) fetch(`${PUSH}/bye`, { method: "POST", keepalive: true, headers: { Authorization: `Bearer ${token()}`, "Content-Type": "application/json" }, body: JSON.stringify({ who: ME }) }).catch(() => {});
+});
 
 /* =========================================================
    Invite link, home-screen hint
