@@ -44,7 +44,7 @@
   button { font: inherit; color: inherit; cursor: pointer; }
 
   /* the room from our first draft, softly out of focus behind everything */
-  .room { position: fixed; inset: -24px; z-index: -2; background: #2a1a12 center/cover no-repeat; filter: blur(7px) saturate(1.05) brightness(.82);
+  .room { position: fixed; inset: -6px; z-index: -2; background: #2a1a12 center/cover no-repeat; filter: blur(1.6px) saturate(1.05) brightness(.82);
           transition: opacity .6s; }
   .room.fade { opacity: 0; }
   .room-shade { position: fixed; inset: 0; z-index: -1; pointer-events: none;
@@ -325,8 +325,8 @@
   .under { justify-content: center; }
   /* the vertical tab tucked behind the right edge of the hanging polaroid */
   .hang { position: relative; }
-  .polaroid { width: min(76vw, 380px, 50dvh); }
-  .under { width: min(76vw, 380px, 50dvh); }
+  .polaroid { width: min(70vw, 370px, 48dvh); }
+  .under { width: min(70vw, 370px, 48dvh); }
   .nudgetab { position: absolute; z-index: 0; left: 100%; top: 26%; margin-left: -4px; width: 40px; padding: 16px 0 12px 4px;
               display: flex; flex-direction: row; align-items: center; gap: 8px; font-size: 17px; font-weight: 600; cursor: pointer;
               writing-mode: vertical-rl; border-radius: 0 3px 3px 0; transform-origin: left center; transition: transform .2s; }
@@ -339,14 +339,14 @@
   /* the room follows the time of day */
   .tod { position: fixed; inset: 0; z-index: -1; pointer-events: none; transition: background 2s, opacity 2s; }
   .room { transition: opacity .6s, filter 2s; }
-  body.tod-morning .room { filter: blur(7px) saturate(.9) brightness(1.12) hue-rotate(-6deg); }
+  body.tod-morning .room { filter: blur(1.6px) saturate(.9) brightness(1.12) hue-rotate(-6deg); }
   body.tod-morning .tod { background: linear-gradient(160deg, rgba(255,226,205,.42), rgba(200,222,255,.26) 55%, rgba(255,255,255,.08)); }
   body.tod-morning .room-shade, body.tod-day .room-shade { opacity: .55; }
-  body.tod-day .room { filter: blur(7px) saturate(1.04) brightness(1.05); }
+  body.tod-day .room { filter: blur(1.6px) saturate(1.04) brightness(1.05); }
   body.tod-day .tod { background: linear-gradient(180deg, rgba(255,252,240,.22), rgba(255,250,235,.06) 70%); }
-  body.tod-golden .room { filter: blur(7px) saturate(1.15) brightness(.85); }
+  body.tod-golden .room { filter: blur(1.6px) saturate(1.15) brightness(.85); }
   body.tod-golden .tod { background: radial-gradient(ellipse at 85% 20%, rgba(255,160,70,.38), transparent 65%), linear-gradient(180deg, rgba(255,140,80,.12), rgba(120,40,60,.15)); }
-  body.tod-night .room { filter: blur(7px) saturate(.9) brightness(.55); }
+  body.tod-night .room { filter: blur(1.6px) saturate(.9) brightness(.55); }
   body.tod-night .tod { background: linear-gradient(180deg, rgba(20,24,60,.45), rgba(10,10,30,.35)); }
   body.tod-night .lights { filter: drop-shadow(0 0 4px rgba(255,200,120,.95)) drop-shadow(0 0 12px rgba(255,170,80,.6)); }
   body.tod-night .bulb { animation-duration: 2.2s; }
@@ -396,6 +396,7 @@
   body.tod-golden .string { --glow: .8; }
   body.tod-morning .string, body.tod-day .string { --glow: .45; }
   @media (prefers-reduced-motion: reduce) { .seal { animation: none; } }
+
   .polaroid#card, .lightbox .polaroid, .thing .mini {
     background:
       radial-gradient(circle at 12% 88%, rgba(150,100,40,.18) 0 3px, transparent 5px),
@@ -474,10 +475,77 @@
   .songpill, .sent { border-radius: 0; outline: 1px dashed rgba(70,45,20,.45); outline-offset: -4px; }
   .notifybar { border-radius: 0; outline: 1px dashed rgba(70,45,20,.5); outline-offset: -6px; }
   @media (prefers-reduced-motion: reduce) { .hang, .bulb { animation: none; } }
+  /* ============ round three: clean paper, warm room, real light ============ */
+  .tod { -webkit-backdrop-filter: sepia(.22) saturate(1.05) brightness(1.04); backdrop-filter: sepia(.22) saturate(1.05) brightness(1.04); }
+  .room-shade { background: radial-gradient(ellipse 80% 70% at 50% 45%, rgba(40,24,10,0) 45%, rgba(40,24,10,.38)); }
+  :root { --aged: var(--paperbg), linear-gradient(172deg, #fffdf8 0%, #fbf6ec 60%, #f4ecdd 100%); }
+  .scene-btn, .round, .bigbtn, .songbtn, .songpill, .sent, .notifybar, #sendBtn, #songSend {
+    box-shadow: inset 0 0 0 .5px rgba(90,60,20,.18); text-shadow: none; color: #3b2a1c; }
+  .bigbtn.primary, #sendBtn, #songSend { background: var(--paperbg), linear-gradient(172deg, #f6e4c4 0%, #ecd2a6 100%); }
+  .polaroid#card, .lightbox .polaroid, .thing .mini {
+    background: var(--paperbg), linear-gradient(172deg, #fffefa 0%, #fbf8f1 60%, #f3eee4 100%);
+    box-shadow: inset 0 0 0 .5px rgba(0,0,0,.08), 0 1px 1px rgba(0,0,0,.14), 4px 12px 26px rgba(40,22,8,.28); }
+  .polaroid#card .photo, .lightbox .photo, .thing .mini .photo { filter: none; box-shadow: inset 0 0 0 1px rgba(0,0,0,.12), inset 0 1px 3px rgba(0,0,0,.2); }
+  .photo.undeveloped { background-image:
+      radial-gradient(ellipse at 30% 28%, rgba(255,250,240,.55), transparent 55%),
+      radial-gradient(ellipse at 72% 76%, rgba(255,214,196,.5), transparent 60%),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='m'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.014' numOctaves='3' seed='4'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 .85 0 0 0 0 .78 0 0 0 .35 0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23m)'/%3E%3C/svg%3E"),
+      linear-gradient(155deg, #e9d6c4, #d9bfa8 50%, #cfae95) !important; }
+  .photo.undeveloped .msg { color: #5b3f2c; text-shadow: 0 1px 0 rgba(255,255,255,.4); }
+  .string .glows { mix-blend-mode: screen; }
+  .string .glowc { opacity: var(--glow, .8); }
+  body.tod-night .string { --glow: 1; } body.tod-golden .string { --glow: .95; } body.tod-morning .string, body.tod-day .string { --glow: .7; }
+
+  /* the photo-booth strip: four little frames, taped up beside the polaroid */
+  .booth { position: absolute; z-index: 3; top: 50%; left: calc(50% + min(35vw, 185px, 24dvh) + 7px); transform: translateY(-62%) rotate(4deg);
+           width: 46px; padding: 4px 4px 14px; border: 0; display: flex; flex-direction: column; gap: 4px; cursor: pointer;
+           background: var(--paperbg), linear-gradient(180deg, #fffefb, #f6f1e7); box-shadow: 0 1px 1px rgba(0,0,0,.15), 3px 8px 14px rgba(40,22,8,.3); transition: transform .25s; }
+  .booth::before { content: ""; position: absolute; left: 8px; right: 8px; top: -9px; height: 16px; transform: rotate(-5deg);
+                   background: rgba(246,214,222,.82); box-shadow: 0 1px 1px rgba(0,0,0,.08);
+                   clip-path: polygon(0 10%, 4% 0, 8% 12%, 92% 0, 96% 14%, 100% 4%, 100% 90%, 96% 100%, 92% 88%, 8% 100%, 4% 86%, 0 96%); }
+  .booth .shot { display: grid; place-items: center; aspect-ratio: 1 / 1.12; overflow: hidden;
+                 background: radial-gradient(ellipse at 40% 30%, #f7e3d2, #d9b59c 70%, #b98e74); box-shadow: inset 0 0 8px rgba(80,40,20,.35); }
+  .booth .shot i { font: 400 13px/1 "Pinyon Script", var(--script); color: #fffaf2; text-shadow: 0 1px 3px rgba(80,40,20,.55); font-style: normal; }
+  .booth .shot:nth-child(2) i { font-size: 20px; } .booth .shot:nth-child(3) i { font-size: 19px; }
+  .booth .sealshot { background: radial-gradient(ellipse at 40% 30%, #fbeee2, #e8cbb4 75%); }
+  .booth .seal { width: 36px; height: 36px; }
+  .booth:active { transform: translateY(-62%) rotate(1deg) scale(.96); }
+  .booth.pulse { animation: boothjig .6s; }
+  .booth.pulse .seal { animation: none; }
+  .booth.pulse .seal .l { transform: rotate(-16deg) translate(-2px, 1px); }
+  .booth.pulse .seal .r { transform: rotate(16deg) translate(2px, 1px); }
+  @keyframes boothjig { 30% { transform: translateY(-62%) rotate(-3deg); } 65% { transform: translateY(-62%) rotate(6deg); } }
+
+  /* sunlight by day, moonlight by night: light through a window, falling across the room */
+  .beam { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; opacity: 0; transition: opacity 2s; }
+  .beam i { position: absolute; top: -20%; height: 150%; width: 22%; transform-origin: top center; filter: blur(14px); mix-blend-mode: screen; }
+  .beam i:nth-child(1) { left: 2%; transform: rotate(-24deg); width: 18%; }
+  .beam i:nth-child(2) { left: 20%; transform: rotate(-24deg); width: 9%; }
+  .beam i:nth-child(3) { left: 33%; transform: rotate(-24deg); width: 15%; }
+  .beam b { position: absolute; inset: 0; background-image: radial-gradient(circle, rgba(255,250,235,.9) 0 1px, transparent 1.5px), radial-gradient(circle, rgba(255,250,235,.6) 0 .8px, transparent 1.2px);
+            background-size: 97px 131px, 61px 83px; mask: linear-gradient(115deg, transparent 5%, #000 25%, #000 50%, transparent 65%); -webkit-mask: linear-gradient(115deg, transparent 5%, #000 25%, #000 50%, transparent 65%);
+            animation: motes 26s linear infinite; opacity: .55; }
+  @keyframes motes { to { background-position: 40px -260px, -30px -330px; } }
+  body.tod-morning .beam, body.tod-day .beam { opacity: 1; }
+  body.tod-morning .beam i, body.tod-day .beam i { background: linear-gradient(180deg, rgba(255,240,200,.55), rgba(255,226,170,.25) 55%, transparent 90%); }
+  body.tod-golden .beam { opacity: 1; }
+  body.tod-golden .beam i { background: linear-gradient(180deg, rgba(255,170,90,.6), rgba(255,140,70,.28) 55%, transparent 90%); transform: rotate(-52deg) !important; top: 10%; }
+  body.tod-night .beam { opacity: 1; }
+  body.tod-night .beam i { background: linear-gradient(180deg, rgba(170,196,255,.42), rgba(150,180,255,.16) 55%, transparent 90%); }
+  body.tod-night .beam i:nth-child(1) { left: auto; right: 4%; transform: rotate(20deg); }
+  body.tod-night .beam i:nth-child(2) { left: auto; right: 25%; transform: rotate(20deg); }
+  body.tod-night .beam i:nth-child(3) { left: auto; right: 37%; transform: rotate(20deg); }
+  body.tod-night .beam b { opacity: .18; }
+  body.tod-night .tod { background: linear-gradient(200deg, rgba(120,150,230,.18), rgba(10,14,40,.4)); }
+  @media (prefers-reduced-motion: reduce) { .beam b { animation: none; } }
+  .leak { z-index: -1; }
+  .polaroid { width: min(66vw, 360px, 46dvh); }
+  .under { width: min(66vw, 360px, 46dvh); }
+  .booth { left: calc(50% + min(33vw, 180px, 23dvh) + 6px); }
 </style>
 </head>
 <body>
-<div class="room" id="room"></div><div class="room-shade"></div><div class="tod"></div><canvas class="snow" id="snow"></canvas><div class="leak"></div><svg class="string" id="string" aria-hidden="true"></svg>
+<div class="room" id="room"></div><div class="room-shade"></div><div class="tod"></div><div class="beam" id="beam"><i></i><i></i><i></i><b></b></div><canvas class="snow" id="snow"></canvas><div class="leak"></div><svg class="string" id="string" aria-hidden="true"></svg>
 <div class="app" id="app">
   <header>
     <div class="logo">polaroid</div>
@@ -490,17 +558,19 @@
   </header>
 
   <div class="stage">
-    <div class="hanger">
-    <svg class="lights" id="lights" viewBox="0 0 400 70" preserveAspectRatio="none"></svg>
-    <div class="hang">
-      <div class="peg"></div>
-      <button class="nudgetab" id="nudgeBtn"><span>thinking of you</span><span class="seal" aria-hidden="true"><svg viewBox="0 0 40 40"><defs><radialGradient id="wax" cx=".38" cy=".32" r=".75"><stop offset="0" stop-color="#d4505a"/><stop offset=".55" stop-color="#a8243a"/><stop offset="1" stop-color="#6e1222"/></radialGradient></defs>
+    <button class="booth" id="nudgeBtn" aria-label="Thinking of you">
+      <span class="shot"><i>thinking</i></span><span class="shot"><i>of</i></span><span class="shot"><i>you</i></span><span class="shot sealshot"><span class="seal" aria-hidden="true"><svg viewBox="0 0 40 40"><defs><radialGradient id="wax" cx=".38" cy=".32" r=".75"><stop offset="0" stop-color="#d4505a"/><stop offset=".55" stop-color="#a8243a"/><stop offset="1" stop-color="#6e1222"/></radialGradient></defs>
 <path class="half l" d="M20 2.5 C14 1.8 9.5 3.5 6.6 6.8 C3.2 9.4 2 13.6 2.6 17.5 C1.4 21.6 2.6 26 5.6 29 C7.4 33.4 11.4 36.6 16 37.2 C17.4 37.6 18.8 37.7 20 37.6 L19 31 L21.2 25 L18.6 19 L21 13 L19.2 7.5 Z" fill="url(#wax)"/>
 <path class="half r" d="M20 2.5 C25.6 1.6 30.6 3.8 33.6 7.4 C37 10 38.2 14.4 37.4 18.4 C38.6 22.8 37 27.2 34 30 C32 34.2 27.6 37.2 23 37.4 C22 37.6 21 37.6 20 37.6 L19 31 L21.2 25 L18.6 19 L21 13 L19.2 7.5 Z" fill="url(#wax)"/>
 <circle cx="20" cy="20" r="11.5" fill="none" stroke="#6e1222" stroke-width="1.2" opacity=".55"/><circle cx="20" cy="20" r="11.5" fill="none" stroke="#f08a92" stroke-width=".6" opacity=".35" transform="translate(-.6 -.6)"/>
 <path d="M20 27.2 C15.4 24 12.4 21.2 12.4 17.8 C12.4 15.4 14.2 13.6 16.4 13.6 C18 13.6 19.3 14.5 20 15.8 C20.7 14.5 22 13.6 23.6 13.6 C25.8 13.6 27.6 15.4 27.6 17.8 C27.6 21.2 24.6 24 20 27.2 Z" fill="#7d1628" opacity=".85"/>
 <path d="M13.6 17 C13.8 15.6 15 14.6 16.4 14.6" stroke="#f3a0a8" stroke-width=".9" fill="none" opacity=".7" stroke-linecap="round"/>
-<ellipse cx="13" cy="9.5" rx="4" ry="2.2" fill="#fff" opacity=".22" transform="rotate(-30 13 9.5)"/></svg></span></button>
+<ellipse cx="13" cy="9.5" rx="4" ry="2.2" fill="#fff" opacity=".22" transform="rotate(-30 13 9.5)"/></svg></span></span>
+    </button>
+    <div class="hanger">
+    <svg class="lights" id="lights" viewBox="0 0 400 70" preserveAspectRatio="none"></svg>
+    <div class="hang">
+      <div class="peg"></div>
       <div class="polaroid" id="card">
         <div class="photo undeveloped" id="photo"></div>
         <div class="cap" id="cap"></div>
@@ -905,14 +975,16 @@ showScene();
   const svg = $("string"), ns = "http://www.w3.org/2000/svg", hang = document.querySelector(".hang"), peg = document.querySelector(".peg");
   const el = (tag, attrs, parent = svg) => { const e = document.createElementNS(ns, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); parent.append(e); return e; };
   svg.innerHTML = `<defs>
-    <radialGradient id="fl-glow"><stop offset="0" stop-color="#ffd38a" stop-opacity=".75"/><stop offset=".35" stop-color="#ffb35c" stop-opacity=".28"/><stop offset="1" stop-color="#ff9a40" stop-opacity="0"/></radialGradient>
-    <radialGradient id="fl-glass" cx=".4" cy=".3" r=".8"><stop offset="0" stop-color="#fffbe8"/><stop offset=".35" stop-color="#ffe7a8"/><stop offset=".8" stop-color="#ffbf5e"/><stop offset="1" stop-color="#e9963c"/></radialGradient>
+    <radialGradient id="fl-glow"><stop offset="0" stop-color="#fff1c8" stop-opacity=".95"/><stop offset=".18" stop-color="#ffd27a" stop-opacity=".6"/><stop offset=".45" stop-color="#ffae4a" stop-opacity=".22"/><stop offset="1" stop-color="#ff9030" stop-opacity="0"/></radialGradient>
+    <radialGradient id="fl-halo"><stop offset="0" stop-color="#ffc870" stop-opacity=".32"/><stop offset=".5" stop-color="#ffa850" stop-opacity=".1"/><stop offset="1" stop-color="#ff9030" stop-opacity="0"/></radialGradient>
+    <radialGradient id="fl-glass" cx=".45" cy=".42" r=".75"><stop offset="0" stop-color="#ffffff"/><stop offset=".25" stop-color="#fff4cf"/><stop offset=".6" stop-color="#ffd27c"/><stop offset="1" stop-color="#f0a24a"/></radialGradient>
+    <linearGradient id="fl-cap" x1="0" x2="1"><stop offset="0" stop-color="#2f3622"/><stop offset=".45" stop-color="#5d6a45"/><stop offset="1" stop-color="#262b1b"/></linearGradient>
     <linearGradient id="fl-wood" x1="0" x2="1"><stop offset="0" stop-color="#c9a274"/><stop offset=".4" stop-color="#ecd6b2"/><stop offset=".6" stop-color="#e2c69c"/><stop offset="1" stop-color="#b98f5f"/></linearGradient></defs>`;
-  const shadow = el("path", { fill: "none", stroke: "rgba(40,22,8,.22)", "stroke-width": 2.4, "stroke-linecap": "round" });
-  const wire = el("path", { fill: "none", stroke: "#6d4526", "stroke-width": 1.8, "stroke-linecap": "round" });
-  const twist = el("path", { fill: "none", stroke: "#b98250", "stroke-width": 1, "stroke-dasharray": "2.2 2.6", "stroke-linecap": "round" });
+  const shadow = el("path", { fill: "none", stroke: "none" });
+  const wire = el("path", { fill: "none", stroke: "#3f4a2e", "stroke-width": 2.6, "stroke-linecap": "round" });
+  const twist = el("path", { fill: "none", stroke: "#6f7d52", "stroke-width": 1.3, "stroke-dasharray": "3 3.4", "stroke-linecap": "round" });
   const hit = el("path", { class: "hit", fill: "none", stroke: "transparent", "stroke-width": 44 });
-  const glows = el("g", {}), bulbsG = el("g", {});
+  const glows = el("g", { class: "glows" }), bulbsG = el("g", {});
   const pin = el("g", {});
   pin.innerHTML = `<rect x="-6.5" y="-12" width="13" height="38" rx="2" fill="url(#fl-wood)" stroke="rgba(90,60,30,.4)" stroke-width=".6"/>
     <path d="M0 -12 V26" stroke="rgba(90,60,30,.45)" stroke-width=".8"/><rect x="-8" y="2" width="16" height="5" rx="2.5" fill="#9ca0a6"/>
@@ -941,12 +1013,18 @@ showScene();
     svg.setAttribute("height", document.documentElement.scrollHeight);
     glows.innerHTML = ""; bulbsG.innerHTML = ""; bulbs.length = 0;
     for (let i = 2; i < N - 2; i++) {
-      if (i === MID || i % 2) continue;
-      const g = el("circle", { r: 15, fill: "url(#fl-glow)", class: "glowc" }, glows);
+      if (Math.abs(i - MID) < 2 || i % 3) continue;
+      const halo = el("circle", { r: 60, fill: "url(#fl-halo)", class: "glowc" }, glows);
+      const g = el("circle", { r: 26, fill: "url(#fl-glow)", class: "glowc" }, glows);
       const b = el("g", {}, bulbsG);
-      b.innerHTML = `<rect x="-2.2" y="0" width="4.4" height="4" rx="1" fill="#4d3b2a"/><path d="M-2.2 1.3h4.4M-2.2 2.6h4.4" stroke="#8b7357" stroke-width=".45"/>
-        <path d="M-3 4 C-3.6 7.5 -2.4 11 0 11.6 C2.4 11 3.6 7.5 3 4 Z" fill="url(#fl-glass)"/><path d="M-1.4 5.5 C-1.8 7.4 -1.2 9 -.4 9.6" stroke="#fff" stroke-width=".7" fill="none" opacity=".8" stroke-linecap="round"/>`;
-      bulbs.push({ i, g, b, f: .6 + Math.random() * 1.4, ph: Math.random() * 6.28 });
+      // a vintage glass bulb: ribbed socket, teardrop glass, glowing filament
+      b.innerHTML = `<rect x="-4.6" y="-1" width="9.2" height="11" rx="2" fill="url(#fl-cap)"/>
+        <path d="M-4.6 2.6h9.2M-4.6 5.4h9.2M-4.6 8.2h9.2" stroke="#7c8a5e" stroke-width=".7" opacity=".7"/>
+        <path d="M-5.6 10 C-8.6 16 -7.6 25 0 28.5 C7.6 25 8.6 16 5.6 10 Z" fill="url(#fl-glass)"/>
+        <path d="M-1.6 11 L-1.2 19 M1.6 11 L1.2 19" stroke="#c98a3a" stroke-width=".5" opacity=".7"/>
+        <path d="M-1.2 19 q.6 -1.6 1.2 0 q.6 1.6 1.2 0" stroke="#fffdf2" stroke-width="1.1" fill="none"/>
+        <path d="M-3.4 13 C-4.6 16.5 -4 21 -2 23.5" stroke="#fff" stroke-width="1.2" fill="none" opacity=".75" stroke-linecap="round"/>`;
+      bulbs.push({ i, g, halo, b, f: .5 + Math.random() * 1.1, ph: Math.random() * 6.28 });
     }
     draw(performance.now());
   }
@@ -983,10 +1061,13 @@ showScene();
     shadow.setAttribute("d", d); shadow.setAttribute("transform", "translate(3 11)");
     for (const B of bulbs) {
       const a = P[B.i], n = P[B.i + 1], ang = Math.atan2(n.y - a.y, n.x - a.x) * 57.3;
-      B.b.setAttribute("transform", `translate(${a.x} ${a.y}) rotate(${ang * .35 + (a.x - a.ox) * 6})`);
-      B.g.setAttribute("cx", a.x); B.g.setAttribute("cy", a.y + 9);
+      const tilt = ang * .25 + (a.x - a.ox) * 5;
+      B.b.setAttribute("transform", `translate(${a.x} ${a.y}) rotate(${tilt})`);
+      const gx = a.x - Math.sin(tilt / 57.3) * 20, gy = a.y + Math.cos(tilt / 57.3) * 20;
+      B.g.setAttribute("cx", gx); B.g.setAttribute("cy", gy); B.halo.setAttribute("cx", gx); B.halo.setAttribute("cy", gy);
       B.g.style.opacity = "";
-      B.g.setAttribute("r", 14 + 2.2 * Math.sin(t / 1000 * B.f + B.ph));
+      const flick = Math.sin(t / 1000 * B.f + B.ph);
+      B.g.setAttribute("r", 25 + 2.5 * flick); B.halo.style.opacity = .85 + .15 * flick;
     }
     // the polaroid swings from the middle of the string, like a pendulum
     const m = P[MID], vx = m.x - m.ox, ax = vx - lastVx; lastVx = vx;
