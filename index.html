@@ -548,6 +548,24 @@
   /* the back strands sit behind the polaroid and buttons, the main one in front */
   .string-back { z-index: 0; }
   .app { position: relative; z-index: 1; }
+  /* a vintage photo-booth strip: cream booth paper, sepia frames, amber tape */
+  .booth { width: 50px; padding: 5px 5px 20px; border-radius: 2px;
+           background: var(--paperbg), linear-gradient(90deg, #efe3c9 0%, #f8f0de 18%, #fbf4e4 50%, #f6ecd6 82%, #eadcbd 100%);
+           box-shadow: inset 0 0 0 .5px rgba(120,80,30,.18), 0 1px 1px rgba(40,22,8,.18), 3px 9px 16px rgba(40,22,8,.32); }
+  .booth::before { background: rgba(226,186,110,.55); box-shadow: inset 0 0 0 .5px rgba(160,110,40,.25); }
+  .booth::after { content: "photo booth · 25¢"; position: absolute; left: 0; right: 0; bottom: 5px; text-align: center;
+                  font: italic 6.5px/1 var(--serif); letter-spacing: .06em; color: rgba(90,60,30,.55); white-space: nowrap; }
+  .booth .shot { border-radius: 3px; aspect-ratio: 1 / 1.18;
+                 background:
+                   radial-gradient(ellipse at 50% 45%, transparent 40%, rgba(50,28,10,.55) 100%),
+                   url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 .3 0 0 0 0 .2 0 0 0 0 .1 0 0 0 .35 0'/%3E%3C/filter%3E%3Crect width='80' height='80' filter='url(%23g)'/%3E%3C/svg%3E"),
+                   radial-gradient(ellipse at 38% 28%, #e9d3b2, #b89068 60%, #8a6544);
+                 box-shadow: inset 0 0 0 1px rgba(60,35,15,.35); }
+  .booth .shot i { color: #fbf1df; text-shadow: 0 1px 2px rgba(40,20,5,.7); }
+  .booth .sealshot { background:
+                   radial-gradient(ellipse at 50% 45%, transparent 45%, rgba(50,28,10,.45) 100%),
+                   radial-gradient(ellipse at 38% 28%, #f1e0c4, #c9a37a 70%); }
+  .booth .shot:first-child i { font-size: 11.5px; }
 </style>
 </head>
 <body>
