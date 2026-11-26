@@ -1,0 +1,8 @@
+Sounds used in Polaroid, from Wikimedia Commons. Converted to AAC; loops have their ends crossfaded.
+
+fire.m4a: "Campfire sound ambience.ogg" by Glaneur de sons — CC BY 3.0 — https://commons.wikimedia.org/wiki/File%3ACampfire_sound_ambience.ogg
+firecat.m4a: "Cat in front of open fire purring.ogg" by Parrot of Doom — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3ACat_in_front_of_open_fire_purring.ogg
+purr.m4a: "Cat purring.ogg" by Peter Hull — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ACat_purring.ogg
+rain.m4a: "Rain against the window.ogg" by cori — Public domain — https://commons.wikimedia.org/wiki/File%3ARain_against_the_window.ogg
+wind.m4a: "Howling wind.ogg" by Tvabutzku1234 — CC0 — https://commons.wikimedia.org/wiki/File%3AHowling_wind.ogg
+meow.m4a: "Meow of a pleading cat.oga" by Heismark — Public domain — https://commons.wikimedia.org/wiki/File%3AMeow_of_a_pleading_cat.oga
