@@ -54,8 +54,8 @@
   body.inroom .link { color: rgba(255,240,222,.75); }
   body.inroom .lights path:first-child { stroke: rgba(0,0,0,.35); }
   .scene-btn { border: 0; background: rgba(255,255,255,.18); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
-               width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; color: inherit; }
-  .scene-btn svg { width: 20px; height: 20px; }
+               width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; color: inherit; }
+  .scene-btn svg { width: 24px; height: 24px; }
   header .right { display: flex; gap: 8px; align-items: center; }
   .sheet { color: var(--ink); }
   body.inroom .sheet .link { color: var(--soft); }
@@ -140,6 +140,26 @@
   .cap input { width: 100%; border: 0; background: none; outline: none; text-align: center; font: inherit; color: inherit; }
   .cap input::placeholder { color: rgba(46,38,34,.3); }
 
+  .metatext { margin-top: 14px; color: rgba(255,240,222,.85); font-size: 16px; }
+  .under { width: min(84vw, 400px, 52dvh); display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; }
+  .under .meta { margin-top: 0; }
+  .nudgepill { margin-left: auto; display: flex; align-items: center; gap: 6px; height: 44px; padding: 0 18px; border: 0; border-radius: 999px;
+               background: rgba(255,250,242,.9); color: var(--ink); font-size: 17px; font-weight: 600; white-space: nowrap;
+               box-shadow: 0 2px 8px rgba(0,0,0,.18); transition: transform .15s; }
+  .nudgepill .h { color: var(--love); font-size: 20px; line-height: 1; }
+  .nudgepill:active { transform: scale(.94); }
+  .nudgepill.pulse { animation: pulse .6s; }
+  @keyframes pulse { 40% { transform: scale(1.12); } }
+  /* thinking of you: the screen they see */
+  .nudge { position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center; text-align: center; overflow: hidden;
+           background: radial-gradient(ellipse at 50% 50%, rgba(120,30,50,.82), rgba(25,10,12,.94)); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); color: #fff4ee;
+           opacity: 0; pointer-events: none; transition: opacity .5s; }
+  .nudge.open { opacity: 1; pointer-events: auto; }
+  .nudge .big { display: block; font: 52px/1.05 var(--script); text-shadow: 0 2px 18px rgba(224,86,111,.7); transform: scale(.8); transition: transform .8s cubic-bezier(.2,1.4,.4,1); }
+  .nudge.open .big { transform: none; }
+  .nudge small { display: block; margin-top: 14px; font-size: 17px; opacity: .8; font-style: italic; }
+  .nudge .fall { position: absolute; top: -40px; color: var(--love); animation: fall linear forwards; }
+  @keyframes fall { to { transform: translateY(115vh) rotate(var(--r)); } }
   .meta { margin-top: 18px; display: flex; align-items: center; gap: 14px; color: var(--soft); font-size: 16px; min-height: 44px; }
   .meta[hidden] { display: none; }
   .round { width: 44px; height: 44px; border-radius: 50%; border: 0; background: rgba(255,255,255,.6); display: grid; place-items: center;
@@ -281,7 +301,7 @@
   .stickers button img { width: 100%; }
   .stickers button.on { outline: 2px solid var(--ink); outline-offset: 1px; }
   .stickers .none { font-size: 13px; color: var(--soft); }
-  .notifybar { border: 0; text-align: left; font: inherit; padding-right: 16px; cursor: pointer; }
+  .notifybar { border: 0; text-align: left; font: inherit; padding-right: 16px; cursor: pointer; top: calc(70px + env(safe-area-inset-top)); bottom: auto; }
   @media (prefers-reduced-motion: reduce) { .hang, .bulb { animation: none; } }
 </style>
 </head>
@@ -292,7 +312,6 @@
     <div class="logo">polaroid</div>
     <div class="right">
       <button class="sent" id="sent" hidden><img id="sentImg" alt=""><span id="sentText"></span></button>
-      <button class="scene-btn" id="nudgeBtn" aria-label="Thinking of you"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 20s-6.5-4-8.5-8c-1.5-3 .2-6.2 3.4-6.2 1.9 0 3.3 1.1 4 2.3h2.2c.7-1.2 2.1-2.3 4-2.3 3.2 0 4.9 3.2 3.4 6.2-2 4-8.5 8-8.5 8z"/><path d="M20.5 2.5v3M19 4h3" stroke-width="1.4"/></svg></button>
       <button class="scene-btn" id="galleryBtn" aria-label="Past photos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="4" width="7" height="8.5" rx=".8"/><rect x="13" y="4" width="7" height="8.5" rx=".8"/><rect x="4" y="14.5" width="7" height="5.5" rx=".8"/><rect x="13" y="14.5" width="7" height="5.5" rx=".8"/></svg></button>
       <button class="scene-btn" id="sceneBtn" aria-label="Change room view"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M3 12.5 12 4l9 8.5M5.5 10.5V20h13v-9.5"/><path d="M10 20v-5h4v5"/></svg></button>
     </div>
@@ -309,10 +328,13 @@
       </div>
     </div>
     </div>
+    <div class="metatext" id="metaText" hidden></div>
+    <div class="under">
     <div class="meta" id="meta" hidden>
-      <span id="metaText"></span>
       <button class="round" id="heartBtn" aria-label="Love it"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20s-7-4.4-9.2-8.6C1.2 8.2 3 4.8 6.4 4.8c2 0 3.4 1.2 4.1 2.4h3c.7-1.2 2.1-2.4 4.1-2.4 3.4 0 5.2 3.4 3.6 6.6C19 15.6 12 20 12 20z" transform="translate(0 0)"/></svg></button>
       <button class="round" id="saveBtn" aria-label="Save"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 4v11m0 0l-4.5-4.5M12 15l4.5-4.5M5 19.5h14"/></svg></button>
+    </div>
+    <button class="nudgepill" id="nudgeBtn">thinking of you <span class="h">♡</span></button>
     </div>
     <button class="songpill" id="songPill" hidden><img id="songPillImg" alt=""><span id="songPillText"></span></button>
   </div>
@@ -579,7 +601,7 @@ function render() {
   const photo = $("photo"), cap = $("cap");
   putSticker($("card"), null);
   photo.innerHTML = "";
-  $("meta").hidden = !received;
+  $("meta").hidden = !received; $("metaText").hidden = !received;
   if (tokenBad) {
     photo.className = "photo undeveloped";
     photo.innerHTML = `<div class="msg">GitHub didn't accept the token.<br>Tap to paste it again.</div>`;
