@@ -1,5 +1,5 @@
 // Polaroid service worker: shows phone notifications.
-const PUSH = "%PUSH%";
+const PUSH = "https://polaroid-push.m4th3m4t1cs.workers.dev";
 const WHO = new URL(self.location.href).searchParams.get("who") || "";
 
 self.addEventListener("install", () => self.skipWaiting());

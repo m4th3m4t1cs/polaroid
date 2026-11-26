@@ -1110,7 +1110,7 @@ $("nudgeBtn").onclick = async () => {
 /* =========================================================
    Phone notifications (through a tiny Cloudflare worker)
    ========================================================= */
-const PUSH = "%PUSH%";
+const PUSH = "https://polaroid-push.m4th3m4t1cs.workers.dev";
 const VAPID = "BMYtQ_cEw2CYewxpbCGeGZNfjqkvlthCDeZCV8pkNL83PptZZ3NNbZQnHQ1irR8NbkU70i4Uhh77DNSuTxwHJFs";
 const pushReady = PUSH.startsWith("https://") && "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
 let swReg = null;
