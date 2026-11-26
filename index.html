@@ -336,6 +336,16 @@
   @keyframes tabpulse { 40% { transform: translateX(6px) rotate(2deg); } }
   .polaroid#card { z-index: 1; }
 
+  /* voice notes */
+  .voicerow { width: 100%; max-width: 480px; padding: 10px 4px 0; display: flex; gap: 8px; }
+  .voicerow .songbtn { margin-top: 0; }
+  .voicebtn { -webkit-touch-callout: none; touch-action: none; }
+  .voicebtn.rec { color: #c43b4c; }
+  .voicebtn.rec svg { animation: blink 1s ease-in-out infinite; }
+  @keyframes blink { 50% { opacity: .25; } }
+  .voiceclip { display: flex; gap: 8px; width: 100%; }
+  .voiceclip #voiceDel { width: 52px; flex: none; }
+  .round svg path[d^="M8 5.5"] { transform: translateX(1px); }
   /* ---------- nostalgia: film grain, a drifting light leak, date stamps ---------- */
   .grain { position: fixed; inset: -50%; z-index: 60; pointer-events: none; opacity: .09; mix-blend-mode: multiply;
            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .2 0 0 0 0 .15 0 0 0 0 .1 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23g)'/%3E%3C/svg%3E");
@@ -380,6 +390,7 @@
     <div class="under">
     <div class="meta" id="meta" hidden>
       <button class="round" id="heartBtn" aria-label="Love it"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20s-7-4.4-9.2-8.6C1.2 8.2 3 4.8 6.4 4.8c2 0 3.4 1.2 4.1 2.4h3c.7-1.2 2.1-2.4 4.1-2.4 3.4 0 5.2 3.4 3.6 6.6C19 15.6 12 20 12 20z" transform="translate(0 0)"/></svg></button>
+      <button class="round" id="voiceBtn" aria-label="Play voice note" hidden><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l10.5-6.5z"/></svg></button>
       <button class="round" id="saveBtn" aria-label="Save"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 4v11m0 0l-4.5-4.5M12 15l4.5-4.5M5 19.5h14"/></svg></button>
     </div>
     </div>
@@ -402,6 +413,10 @@
   </div>
   <div class="filters" id="filters"></div>
   <div class="stickers" id="stickerRow"></div>
+  <div class="voicerow">
+    <button class="songbtn voicebtn" id="recBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg><span id="recText">hold to record a voice note</span></button>
+    <div class="voiceclip" id="voiceClip" hidden><button class="songbtn" id="voicePlay"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l10.5-6.5z"/></svg><span id="voiceLen">voice note</span></button><button class="songbtn" id="voiceDel" aria-label="Remove voice note">✕</button></div>
+  </div>
   <div class="send" style="grid-template-columns:1fr"><button class="bigbtn primary" id="sendBtn">send</button></div>
 </div>
 
@@ -412,7 +427,7 @@
 </div>
 <div class="lightbox" id="lightbox">
   <div class="polaroid"><div class="photo" id="lbPhoto"></div><div class="cap" id="lbCap"></div></div>
-  <div class="meta"><span id="lbText"></span><button class="round" id="lbSave" aria-label="Save"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 4v11m0 0l-4.5-4.5M12 15l4.5-4.5M5 19.5h14"/></svg></button></div>
+  <div class="meta"><span id="lbText"></span><button class="round" id="lbVoice" aria-label="Play voice note" hidden><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l10.5-6.5z"/></svg></button><button class="round" id="lbSave" aria-label="Save"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 4v11m0 0l-4.5-4.5M12 15l4.5-4.5M5 19.5h14"/></svg></button></div>
 </div>
 
 <div class="sheet" id="songSheet">
@@ -517,8 +532,10 @@ async function refresh() {
   const note = await getJSON(`note-to-${ME}.json`);
   const caption = note && note.data.sha === file.sha ? note.data.caption : "";
   const sticker = note && note.data.sha === file.sha ? note.data.sticker || null : null;
+  const voice = note && note.data.sha === file.sha ? note.data.voice || null : null;
+  const voiceUrl = voice ? await voiceBlobUrl(ME, voice).catch(() => null) : null;
   const heart = await getJSON(`heart-to-${THEM}.json`);
-  received = { sha: file.sha, url, img, blob, date, fresh: true, caption, sticker, loved: !!(heart && heart.data.sha === file.sha) };
+  received = { sha: file.sha, url, img, blob, date, fresh: true, caption, sticker, voiceUrl, loved: !!(heart && heart.data.sha === file.sha) };
   return true;
 }
 
@@ -551,8 +568,33 @@ async function checkHeart() {   // did they love the last photo I sent?
   return theyLoved && !was;
 }
 
-async function sendPhoto(blob, caption, sticker) {
+const voiceUrls = {};
+async function voiceBlobUrl(to, v) {   // v = { ref, mime }
+  const key = `${to}:${v.ref}`;
+  if (voiceUrls[key]) return voiceUrls[key];
+  const r = await gh(`contents/voice-to-${to}?ref=${v.ref}`, { headers: { Accept: "application/vnd.github.raw" } });
+  if (!r.ok) throw new Error(r.status);
+  return (voiceUrls[key] = URL.createObjectURL(new Blob([await r.arrayBuffer()], { type: v.mime || "audio/mp4" })));
+}
+let playing = null;
+function playVoice(url, btn) {
+  if (playing) { playing.pause(); playing = null; }
+  const a = new Audio(url); playing = a;
+  btn && btn.classList.add("loved"); a.onended = a.onpause = () => btn && btn.classList.remove("loved");
+  a.play().catch(() => {});
+}
+const blobB64 = blob => new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result.split(",")[1]); fr.readAsDataURL(blob); });
+async function sendPhoto(blob, caption, sticker, voice) {
   const path = `to-${THEM}.jpg`;
+  // a voice note goes up first, so the photo can point at that exact version
+  let voiceRef = null;
+  if (voice) {
+    const vp = `voice-to-${THEM}`;
+    const vcur = await gh(`contents/${vp}?ref=${BRANCH}`).catch(() => null);
+    const vres = await gh(`contents/${vp}`, { method: "PUT", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: `voice for ${THEM}`, content: await blobB64(voice.blob), sha: vcur && vcur.ok ? (await vcur.json()).sha : undefined, branch: BRANCH }) });
+    if (vres.ok) voiceRef = { ref: (await vres.json()).commit.sha, mime: voice.mime };
+  }
   const cur = await gh(`contents/${path}?ref=${BRANCH}`);
   if (cur.status === 401) { forgetToken(); throw new Error("GitHub didn't accept the token"); }
   const sha = cur.ok ? (await cur.json()).sha : undefined;
@@ -561,11 +603,11 @@ async function sendPhoto(blob, caption, sticker) {
   });
   const res = await gh(`contents/${path}`, {
     method: "PUT", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ message: `photo for ${THEM}\n\n${caption || ""}` + (sticker ? `\nsticker:${sticker.k},${sticker.x.toFixed(3)},${sticker.y.toFixed(3)},${sticker.r}` : ""), content, sha, branch: BRANCH }),
+    body: JSON.stringify({ message: `photo for ${THEM}\n\n${caption || ""}` + (sticker ? `\nsticker:${sticker.k},${sticker.x.toFixed(3)},${sticker.y.toFixed(3)},${sticker.r}` : "") + (voiceRef ? `\nvoice:${voiceRef.ref},${voiceRef.mime}` : ""), content, sha, branch: BRANCH }),
   });
   if (!res.ok) throw new Error(`${res.status} ${(await res.json().catch(() => ({}))).message || ""}`);
   const newSha = (await res.json()).content.sha;
-  await putJSON(`note-to-${THEM}.json`, { sha: newSha, caption: caption || "", sticker: sticker || null }, `note for ${THEM}`).catch(() => {});
+  await putJSON(`note-to-${THEM}.json`, { sha: newSha, caption: caption || "", sticker: sticker || null, voice: voiceRef }, `note for ${THEM}`).catch(() => {});
   lastSent = { sha: newSha, at: Date.now() }; theyLoved = false;
   notifyThem("photo", { caption: caption || "" });
   try { localStorage.setItem("last_sent", JSON.stringify(lastSent)); } catch {}
@@ -673,6 +715,7 @@ function render() {
   }
   $("metaText").textContent = `${ago(Date.now() - received.date)} · ${left(received.date + LIFETIME - Date.now())}`;
   $("heartBtn").classList.toggle("loved", received.loved);
+  $("voiceBtn").hidden = !received.voiceUrl;
   $("heartBtn").querySelector("path").setAttribute("fill", received.loved ? "currentColor" : "none");
 }
 
@@ -688,6 +731,7 @@ async function motionAllowed() {
 $("photo").onclick = async () => {
   if (tokenBad) { await refresh(); render(); return; }
   if (!received || iSaw(received.sha) || received.developing) return;
+  if (received.voiceUrl) playVoice(received.voiceUrl, $("voiceBtn"));   // their voice plays while it develops
   received.developing = true;
   const photo = $("photo"), hang = document.querySelector(".hang");
   const canShake = await motionAllowed();
@@ -732,6 +776,7 @@ async function savePhoto(blob, url) {
   catch (e) { if (e.name === "AbortError") return; }
   const a = document.createElement("a"); a.href = url; a.download = "polaroid.jpg"; a.click();
 }
+$("voiceBtn").onclick = () => { if (received && received.voiceUrl) playVoice(received.voiceUrl, $("voiceBtn")); };
 $("saveBtn").onclick = () => { if (received) savePhoto(received.blob, received.url); };
 
 function hearts(from, n = 10) {
@@ -834,6 +879,7 @@ async function startDraft(file) {
   }
   $("capInput").value = ""; $("draftCard").classList.remove("fly");
   draft.sticker = null; putSticker($("draftCard"), null); buildStickerRow();
+  draft.voice = null; showVoiceClip();
   await setFilter("film");
   $("sheet").classList.add("open");
 }
@@ -864,6 +910,43 @@ function dragSticker(img) {   // move the sticker around on the draft
     img.onpointerup = () => { img.onpointermove = null; };
   };
 }
+// hold to record (up to 10 seconds)
+let rec = null, holding = false, recTimer = null;
+const fmt = secs => `0:${String(Math.round(secs)).padStart(2, "0")}`;
+function showVoiceClip() {
+  $("voiceClip").hidden = !draft.voice; $("recBtn").hidden = !!draft.voice;
+  if (draft.voice) $("voiceLen").textContent = `your voice note · ${fmt(draft.voice.secs)}`;
+}
+async function startRec() {
+  if (rec || !navigator.mediaDevices || !window.MediaRecorder) { if (!window.MediaRecorder) toast("voice notes don't work on this phone"); return; }
+  let stream;
+  try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); } catch { return toast("the microphone isn't allowed"); }
+  if (!holding) { stream.getTracks().forEach(t => t.stop()); $("recText").textContent = "now hold to record"; return; }
+  const mime = ["audio/mp4", "audio/webm;codecs=opus", "audio/webm"].find(m => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m));
+  const chunks = [], start = Date.now();
+  rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+  rec.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+  rec.onstop = () => {
+    stream.getTracks().forEach(t => t.stop());
+    const type = (rec.mimeType || mime || "audio/mp4").split(";")[0], secs = (Date.now() - start) / 1000;
+    rec = null; clearInterval(recTimer); $("recBtn").classList.remove("rec"); $("recText").textContent = "hold to record a voice note";
+    if (secs < 0.7) return toast("hold it down while you talk");
+    draft.voice = { blob: new Blob(chunks, { type }), mime: type, secs: Math.min(10, secs) }; showVoiceClip();
+  };
+  rec.start(); $("recBtn").classList.add("rec");
+  if (navigator.vibrate) navigator.vibrate(10);
+  recTimer = setInterval(() => {
+    const t = (Date.now() - start) / 1000;
+    $("recText").textContent = `recording… ${fmt(t)} / 0:10`;
+    if (t >= 10) stopRec();
+  }, 200);
+}
+function stopRec() { holding = false; if (rec && rec.state === "recording") rec.stop(); }
+$("recBtn").addEventListener("pointerdown", e => { e.preventDefault(); holding = true; startRec(); });
+for (const ev of ["pointerup", "pointerleave", "pointercancel"]) $("recBtn").addEventListener(ev, stopRec);
+$("recBtn").addEventListener("contextmenu", e => e.preventDefault());
+$("voicePlay").onclick = () => { if (draft.voice) playVoice(URL.createObjectURL(draft.voice.blob)); };
+$("voiceDel").onclick = () => { draft.voice = null; showVoiceClip(); };
 for (const id of ["camera", "library"]) $(id).onchange = e => { const f = e.target.files[0]; e.target.value = ""; if (f) startDraft(f); };
 $("cancel").onclick = () => $("sheet").classList.remove("open");
 $("capInput").onkeydown = e => { if (e.key === "Enter") e.target.blur(); };
@@ -871,7 +954,7 @@ $("capInput").onkeydown = e => { if (e.key === "Enter") e.target.blur(); };
 $("sendBtn").onclick = async () => {
   const btn = $("sendBtn"); btn.disabled = true; btn.textContent = "sending…";
   try {
-    await sendPhoto(draft.blob, $("capInput").value.trim(), draft.sticker);
+    await sendPhoto(draft.blob, $("capInput").value.trim(), draft.sticker, draft.voice);
     const t = document.createElement("canvas"); t.width = t.height = 80;
     t.getContext("2d").drawImage(draft.src, 0, 0, 80, 80);
     sentThumb = t.toDataURL("image/jpeg", 0.7);
@@ -898,9 +981,10 @@ async function loadHistory() {
     return (await r.json())
       .filter(c => c.commit.message.startsWith("photo for"))
       .map(c => {
-        const lines = c.commit.message.split("\n").slice(2), st = lines.find(l => l.startsWith("sticker:"));
+        const lines = c.commit.message.split("\n").slice(2), st = lines.find(l => l.startsWith("sticker:")), vo = lines.find(l => l.startsWith("voice:"));
         const [k, x, y, r] = st ? st.slice(8).split(",") : [];
-        return { ref: c.sha, to, date: Date.parse(c.commit.committer.date), caption: lines.filter(l => !l.startsWith("sticker:")).join(" ").trim(), sticker: st ? { k, x: +x, y: +y, r: +r } : null };
+        return { ref: c.sha, to, date: Date.parse(c.commit.committer.date), caption: lines.filter(l => !/^(sticker|voice):/.test(l)).join(" ").trim(), sticker: st ? { k, x: +x, y: +y, r: +r } : null,
+                 voice: vo ? { ref: vo.slice(6).split(",")[0], mime: vo.slice(6).split(",")[1] } : null };
       });
   }));
   return lists.flat()
@@ -1044,6 +1128,8 @@ async function showBig(item) {
   $("lbPhoto").innerHTML = ""; addStamp($("lbPhoto"), item.date);
   $("lbText").textContent = `${item.to === ME ? `from ${THEM_NAME}` : "from you"} · ${when(item.date)}, ${new Date(item.date).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }).toLowerCase()}`;
   $("lbSave").onclick = e => { e.stopPropagation(); savePhoto(blob, urls[item.ref]); };
+  $("lbVoice").hidden = !item.voice;
+  $("lbVoice").onclick = async e => { e.stopPropagation(); const u = await voiceBlobUrl(item.to, item.voice).catch(() => null); if (u) playVoice(u, $("lbVoice")); else toast("couldn't load the voice note"); };
   $("lightbox").classList.add("open");
 }
 $("galleryBtn").onclick = openGallery;
