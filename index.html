@@ -8,8 +8,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Polaroid">
 <meta name="theme-color" content="#f3ebe0">
-<link rel="apple-touch-icon" href="icon-180.png?v=4">
-<link rel="icon" href="icon-180.png?v=4">
+<link rel="apple-touch-icon" href="icon-180.png?v=5">
+<link rel="icon" href="icon-180.png?v=5">
 <link rel="manifest" href="manifest.json">
 <title>Polaroid</title>
 <script src="stickers.js?v=1"></script>
@@ -1642,7 +1642,7 @@ async function openGallery() {
     } else {
       el.style.width = "44%";
       el.innerHTML = `<span class="pin"></span><div class="cassette"><div class="tape-label"><img alt=""><div><b></b><small></small></div></div><div class="reels"><i></i><i></i></div></div>`;
-      el.querySelector("img").src = it.s.thumb || "icon-180.png?v=4";
+      el.querySelector("img").src = it.s.thumb || "icon-180.png?v=5";
       el.querySelector("b").textContent = it.s.title || "a song";
       el.querySelector("small").textContent = `${from} · ${when(it.date)}`;
       el._open = () => showSong(it.s, it.s.to === ME ? THEM_NAME : "you");
@@ -1745,7 +1745,7 @@ function renderSong() {
   pill.hidden = !song; if (!song) return;
   const fresh = !songSeen(song.at);
   pill.classList.toggle("new", fresh);
-  $("songPillImg").src = song.thumb || "icon-180.png?v=4";
+  $("songPillImg").src = song.thumb || "icon-180.png?v=5";
   $("songPillText").textContent = fresh ? `${THEM_NAME} sent you a song ♪` : `${THEM_NAME}'s song: ${song.title || "♪"}`;
 }
 function showSong(s, fromName) {
