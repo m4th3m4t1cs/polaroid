@@ -12,6 +12,7 @@
 <link rel="icon" href="icon-180.png?v=4">
 <link rel="manifest" href="manifest.json">
 <title>Polaroid</title>
+<script src="stickers.js?v=1"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
@@ -271,6 +272,15 @@
   @keyframes wiggle { 25% { transform: rotate(-6deg); } 75% { transform: rotate(6deg); } }
   .hang.jiggle { animation: jiggle .35s ease-out; }
   @keyframes jiggle { 25% { transform: rotate(-5deg) translateX(-4px); } 60% { transform: rotate(4deg) translateX(3px); } }
+  /* stickers */
+  .stk { position: absolute; width: 30%; pointer-events: none; z-index: 3; filter: drop-shadow(0 1px 1px rgba(60,35,20,.3)) drop-shadow(0 4px 5px rgba(60,35,20,.18)); }
+  .sheet .stk { pointer-events: auto; touch-action: none; cursor: grab; }
+  .stickers { display: flex; gap: 8px; overflow-x: auto; width: 100%; max-width: 480px; padding: 8px 4px 4px; scrollbar-width: none; }
+  .stickers::-webkit-scrollbar { display: none; }
+  .stickers button { flex: none; width: 52px; height: 52px; border-radius: 12px; border: 0; background: rgba(255,255,255,.55); display: grid; place-items: center; padding: 4px; }
+  .stickers button img { width: 100%; }
+  .stickers button.on { outline: 2px solid var(--ink); outline-offset: 1px; }
+  .stickers .none { font-size: 13px; color: var(--soft); }
   .notifybar { border: 0; text-align: left; font: inherit; padding-right: 16px; cursor: pointer; }
   @media (prefers-reduced-motion: reduce) { .hang, .bulb { animation: none; } }
 </style>
@@ -322,6 +332,7 @@
     <div class="cap"><input id="capInput" maxlength="30" placeholder="write something…" enterkeyhint="done"></div>
   </div>
   <div class="filters" id="filters"></div>
+  <div class="stickers" id="stickerRow"></div>
   <div class="send" style="grid-template-columns:1fr"><button class="bigbtn primary" id="sendBtn">send</button></div>
 </div>
 
@@ -436,8 +447,9 @@ async function refresh() {
   const img = await loadImage(url);
   const note = await getJSON(`note-to-${ME}.json`);
   const caption = note && note.data.sha === file.sha ? note.data.caption : "";
+  const sticker = note && note.data.sha === file.sha ? note.data.sticker || null : null;
   const heart = await getJSON(`heart-to-${THEM}.json`);
-  received = { sha: file.sha, url, img, blob, date, fresh: true, caption, loved: !!(heart && heart.data.sha === file.sha) };
+  received = { sha: file.sha, url, img, blob, date, fresh: true, caption, sticker, loved: !!(heart && heart.data.sha === file.sha) };
   return true;
 }
 
@@ -470,7 +482,7 @@ async function checkHeart() {   // did they love the last photo I sent?
   return theyLoved && !was;
 }
 
-async function sendPhoto(blob, caption) {
+async function sendPhoto(blob, caption, sticker) {
   const path = `to-${THEM}.jpg`;
   const cur = await gh(`contents/${path}?ref=${BRANCH}`);
   if (cur.status === 401) { forgetToken(); throw new Error("GitHub didn't accept the token"); }
@@ -480,11 +492,11 @@ async function sendPhoto(blob, caption) {
   });
   const res = await gh(`contents/${path}`, {
     method: "PUT", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ message: `photo for ${THEM}` + (caption ? `\n\n${caption}` : ""), content, sha, branch: BRANCH }),
+    body: JSON.stringify({ message: `photo for ${THEM}\n\n${caption || ""}` + (sticker ? `\nsticker:${sticker.k},${sticker.x.toFixed(3)},${sticker.y.toFixed(3)},${sticker.r}` : ""), content, sha, branch: BRANCH }),
   });
   if (!res.ok) throw new Error(`${res.status} ${(await res.json().catch(() => ({}))).message || ""}`);
   const newSha = (await res.json()).content.sha;
-  await putJSON(`note-to-${THEM}.json`, { sha: newSha, caption: caption || "" }, `note for ${THEM}`).catch(() => {});
+  await putJSON(`note-to-${THEM}.json`, { sha: newSha, caption: caption || "", sticker: sticker || null }, `note for ${THEM}`).catch(() => {});
   lastSent = { sha: newSha, at: Date.now() }; theyLoved = false;
   notifyThem("photo", { caption: caption || "" });
   try { localStorage.setItem("last_sent", JSON.stringify(lastSent)); } catch {}
@@ -565,6 +577,7 @@ function left(ms) {
 
 function render() {
   const photo = $("photo"), cap = $("cap");
+  putSticker($("card"), null);
   photo.innerHTML = "";
   $("meta").hidden = !received;
   if (tokenBad) {
@@ -585,6 +598,7 @@ function render() {
   } else {
     if (!received.developing) photo.className = "photo";
     cap.textContent = received.caption || "";
+    if (!received.developing) putSticker($("card"), received.sticker);
   }
   $("metaText").textContent = `${ago(Date.now() - received.date)} · ${left(received.date + LIFETIME - Date.now())}`;
   $("heartBtn").classList.toggle("loved", received.loved);
@@ -714,6 +728,15 @@ function applyFilter(src, name, maxSide = 1200) {
   return c;
 }
 
+// a sticker sits on the polaroid at x,y (fractions of the card) with a little tilt
+function putSticker(card, st) {
+  card.querySelectorAll(".stk").forEach(e => e.remove());
+  const t = st && STICKERS.find(x => x.n === st.k);
+  if (!t) return null;
+  const img = document.createElement("img"); img.className = "stk"; img.alt = ""; img.src = t.s;
+  img.style.left = `${st.x * 100}%`; img.style.top = `${st.y * 100}%`; img.style.transform = `translate(-50%, -50%) rotate(${st.r}deg)`;
+  card.append(img); return img;
+}
 let draft = null;   // { src, filter, blob, url }
 async function setFilter(name) {
   draft.filter = name;
@@ -739,8 +762,36 @@ async function startDraft(file) {
     strip.append(b);
   }
   $("capInput").value = ""; $("draftCard").classList.remove("fly");
+  draft.sticker = null; putSticker($("draftCard"), null); buildStickerRow();
   await setFilter("film");
   $("sheet").classList.add("open");
+}
+function buildStickerRow() {
+  const row = $("stickerRow"); row.innerHTML = "";
+  const none = document.createElement("button"); none.className = "none on"; none.textContent = "none"; row.append(none);
+  const pick = (b, t) => {
+    [...row.children].forEach(x => x.classList.toggle("on", x === b));
+    draft.sticker = t ? { k: t.n, x: draft.sticker ? draft.sticker.x : .82, y: draft.sticker ? draft.sticker.y : .14, r: Math.round(Math.random() * 24 - 12) } : null;
+    dragSticker(putSticker($("draftCard"), draft.sticker));
+  };
+  none.onclick = () => pick(none, null);
+  for (const t of STICKERS) {
+    const b = document.createElement("button"); b.innerHTML = `<img alt="">`; b.querySelector("img").src = t.s; b.querySelector("img").alt = t.n;
+    b.onclick = () => pick(b, t); row.append(b);
+  }
+}
+function dragSticker(img) {   // move the sticker around on the draft
+  if (!img) return;
+  img.onpointerdown = e => {
+    e.preventDefault(); img.setPointerCapture(e.pointerId);
+    const card = $("draftCard").getBoundingClientRect();
+    img.onpointermove = m => {
+      draft.sticker.x = Math.min(1, Math.max(0, (m.clientX - card.left) / card.width));
+      draft.sticker.y = Math.min(1, Math.max(0, (m.clientY - card.top) / card.height));
+      img.style.left = `${draft.sticker.x * 100}%`; img.style.top = `${draft.sticker.y * 100}%`;
+    };
+    img.onpointerup = () => { img.onpointermove = null; };
+  };
 }
 for (const id of ["camera", "library"]) $(id).onchange = e => { const f = e.target.files[0]; e.target.value = ""; if (f) startDraft(f); };
 $("cancel").onclick = () => $("sheet").classList.remove("open");
@@ -749,7 +800,7 @@ $("capInput").onkeydown = e => { if (e.key === "Enter") e.target.blur(); };
 $("sendBtn").onclick = async () => {
   const btn = $("sendBtn"); btn.disabled = true; btn.textContent = "sending…";
   try {
-    await sendPhoto(draft.blob, $("capInput").value.trim());
+    await sendPhoto(draft.blob, $("capInput").value.trim(), draft.sticker);
     const t = document.createElement("canvas"); t.width = t.height = 80;
     t.getContext("2d").drawImage(draft.src, 0, 0, 80, 80);
     sentThumb = t.toDataURL("image/jpeg", 0.7);
@@ -775,7 +826,11 @@ async function loadHistory() {
     if (!r || !r.ok) return [];
     return (await r.json())
       .filter(c => c.commit.message.startsWith("photo for"))
-      .map(c => ({ ref: c.sha, to, date: Date.parse(c.commit.committer.date), caption: c.commit.message.split("\n").slice(2).join(" ").trim() }));
+      .map(c => {
+        const lines = c.commit.message.split("\n").slice(2), st = lines.find(l => l.startsWith("sticker:"));
+        const [k, x, y, r] = st ? st.slice(8).split(",") : [];
+        return { ref: c.sha, to, date: Date.parse(c.commit.committer.date), caption: lines.filter(l => !l.startsWith("sticker:")).join(" ").trim(), sticker: st ? { k, x: +x, y: +y, r: +r } : null };
+      });
   }));
   return lists.flat()
     .filter(x => x.date >= GALLERY_FROM)
@@ -834,6 +889,7 @@ async function openGallery() {
       el.style.width = "40%";
       el.innerHTML = `<span class="pin"></span><div class="mini"><div class="photo loading"></div><div class="cap"></div></div><div class="label"></div>`;
       el.querySelector(".cap").textContent = it.p.caption;
+      putSticker(el.querySelector(".mini"), it.p.sticker);
       el.querySelector(".label").textContent = `${from} · ${when(it.date)}`;
       queue.push(() => photoBlob(it.p).then(blob => {
         urls[it.p.ref] = urls[it.p.ref] || URL.createObjectURL(blob);
@@ -912,6 +968,7 @@ async function showBig(item) {
   urls[item.ref] = urls[item.ref] || URL.createObjectURL(blob);
   $("lbPhoto").style.backgroundImage = `url("${urls[item.ref]}")`;
   $("lbCap").textContent = item.caption;
+  putSticker($("lbPhoto").parentElement, item.sticker);
   $("lbText").textContent = `${item.to === ME ? `from ${THEM_NAME}` : "from you"} · ${when(item.date)}, ${new Date(item.date).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }).toLowerCase()}`;
   $("lbSave").onclick = e => { e.stopPropagation(); savePhoto(blob, urls[item.ref]); };
   $("lightbox").classList.add("open");
