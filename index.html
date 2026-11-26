@@ -353,6 +353,7 @@
   body.tod-night .polaroid#card { box-shadow: inset 0 0 0 .5px rgba(0,0,0,.06), 0 1px 1px rgba(0,0,0,.14), 0 -6px 30px rgba(255,190,110,.18); }
   body.tod-night .leak { opacity: .35; animation: none; }
   .snow { position: fixed; inset: 0; z-index: -1; pointer-events: none; width: 100%; height: 100%; }
+  #soundBtn .x { display: none; } #soundBtn.off .x { display: inline; } #soundBtn.off .w1, #soundBtn.off .w2 { display: none; }
   /* voice notes */
   .voicerow { width: 100%; max-width: 480px; padding: 10px 4px 0; display: flex; gap: 8px; }
   .voicerow .songbtn { margin-top: 0; }
@@ -387,6 +388,7 @@
     <div class="right">
       <button class="sent" id="sent" hidden><img id="sentImg" alt=""><span id="sentText"></span></button>
       <button class="scene-btn" id="galleryBtn" aria-label="Past photos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="4" width="7" height="8.5" rx=".8"/><rect x="13" y="4" width="7" height="8.5" rx=".8"/><rect x="4" y="14.5" width="7" height="5.5" rx=".8"/><rect x="13" y="14.5" width="7" height="5.5" rx=".8"/></svg></button>
+      <button class="scene-btn" id="soundBtn" aria-label="Cozy sounds"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path class="w1" d="M15.5 9.2a4 4 0 0 1 0 5.6"/><path class="w2" d="M18 6.8a7.5 7.5 0 0 1 0 10.4"/><path class="x" d="M16 9.5l5 5m0-5l-5 5"/></svg></button>
       <button class="scene-btn" id="sceneBtn" aria-label="Change room view"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M3 12.5 12 4l9 8.5M5.5 10.5V20h13v-9.5"/><path d="M10 20v-5h4v5"/></svg></button>
     </div>
   </header>
@@ -694,7 +696,76 @@ applyTimeOfDay(); setInterval(applyTimeOfDay, 5 * 60 * 1000);
     if (!document.hidden) requestAnimationFrame(frame); else document.addEventListener("visibilitychange", () => { last = performance.now(); requestAnimationFrame(frame); }, { once: true });
   })(last);
 })();
-$("sceneBtn").onclick = () => { sceneIx = (sceneIx + 1) % SCENES.length; showScene(); };
+/* =========================================================
+   Cozy sounds, made right here in the browser (no audio files)
+   ========================================================= */
+const SOUND_OF = { fire: "fire", window: "wind", bunk: "rain", desk: "rain", cork: "rain", vanity: "vinyl", shelf: "vinyl" };
+const SOUND_NAME = { fire: "the fire crackling", wind: "wind at the window", rain: "rain on the window", vinyl: "a record playing softly" };
+let actx = null, white = null, brown = null, sound = null;
+let soundOn = (() => { try { return localStorage.getItem("sound") === "1"; } catch { return false; } })();
+function buffers() {
+  const len = actx.sampleRate * 4;
+  white = actx.createBuffer(1, len, actx.sampleRate); brown = actx.createBuffer(1, len, actx.sampleRate);
+  const w = white.getChannelData(0), b = brown.getChannelData(0); let last = 0;
+  for (let i = 0; i < len; i++) { w[i] = Math.random() * 2 - 1; last = (last + .02 * w[i]) / 1.02; b[i] = last * 3.5; }
+}
+function makeSound(kind) {
+  const out = actx.createGain(); out.gain.value = 0; out.connect(actx.destination);
+  const srcs = [], timers = []; let alive = true;
+  const loop = (buf, ...chain) => { const s = actx.createBufferSource(); s.buffer = buf; s.loop = true; let n = s; for (const c of chain) n = n.connect(c); n.connect(out); s.start(0, Math.random() * 3); srcs.push(s); };
+  const filt = (type, f, q = .7) => { const b = actx.createBiquadFilter(); b.type = type; b.frequency.value = f; b.Q.value = q; return b; };
+  const gain = v => { const g = actx.createGain(); g.gain.value = v; return g; };
+  const blip = (hp, peak, len) => {   // one crackle / click / drip
+    const t = actx.currentTime, s = actx.createBufferSource(), e = actx.createGain();
+    s.buffer = white; e.gain.setValueAtTime(0, t); e.gain.linearRampToValueAtTime(peak, t + .002); e.gain.exponentialRampToValueAtTime(.0005, t + len);
+    s.connect(filt("highpass", hp)).connect(e).connect(out); s.start(t, Math.random() * 3, len + .05);
+  };
+  const every = (fn, min, max) => { const go = () => { if (!alive) return; fn(); timers.push(setTimeout(go, min + Math.random() * (max - min))); }; go(); };
+  if (kind === "fire") {
+    loop(brown, filt("lowpass", 420), gain(.55));
+    every(() => blip(1200 + Math.random() * 3500, .15 + Math.random() * .45, .02 + Math.random() * .07), 30, Math.random() < .25 ? 700 : 220);
+  } else if (kind === "rain") {
+    loop(white, filt("bandpass", 2200, .35), gain(.16));
+    loop(brown, filt("lowpass", 900), gain(.22));
+    every(() => blip(2500 + Math.random() * 4000, .04 + Math.random() * .06, .03), 25, 140);
+  } else if (kind === "wind") {
+    const bp = filt("bandpass", 450, 1.2), g = gain(.5);
+    const lfo = actx.createOscillator(), depth = gain(260); lfo.frequency.value = .07; lfo.connect(depth).connect(bp.frequency); lfo.start(); srcs.push(lfo);
+    const lfo2 = actx.createOscillator(), d2 = gain(.25); lfo2.frequency.value = .045; lfo2.connect(d2).connect(g.gain); lfo2.start(); srcs.push(lfo2);
+    loop(white, bp, g);
+  } else {   // vinyl
+    loop(white, filt("highpass", 3500), gain(.05));
+    loop(brown, filt("lowpass", 140), gain(.25));
+    every(() => blip(1800, .14 + Math.random() * .3, .014), 70, 700);
+  }
+  out.gain.linearRampToValueAtTime(.7, actx.currentTime + 1.5);
+  return { kind, stop() {
+    alive = false; timers.forEach(clearTimeout);
+    out.gain.cancelScheduledValues(actx.currentTime); out.gain.setValueAtTime(out.gain.value, actx.currentTime); out.gain.linearRampToValueAtTime(0, actx.currentTime + .8);
+    setTimeout(() => { srcs.forEach(n => { try { n.stop(); } catch {} }); out.disconnect(); }, 1000);
+  } };
+}
+function syncSound() {
+  $("soundBtn").classList.toggle("off", !soundOn);
+  if (!soundOn) { if (sound) { sound.stop(); sound = null; } return; }
+  if (!actx) {
+    try { if (navigator.audioSession) navigator.audioSession.type = "playback"; } catch {}   // play even with the iPhone's silent switch
+    actx = new (window.AudioContext || window.webkitAudioContext)(); buffers();
+  }
+  actx.resume();
+  const kind = SOUND_OF[SCENES[sceneIx]] || "rain";
+  if (sound && sound.kind === kind) return;
+  if (sound) sound.stop();
+  sound = makeSound(kind);
+}
+$("soundBtn").onclick = () => {
+  soundOn = !soundOn; try { localStorage.setItem("sound", soundOn ? "1" : "0"); } catch {}
+  syncSound(); toast(soundOn ? `♪ ${SOUND_NAME[SOUND_OF[SCENES[sceneIx]] || "rain"]}` : "sounds off");
+};
+$("soundBtn").classList.toggle("off", !soundOn);
+if (soundOn) document.addEventListener("pointerdown", () => syncSound(), { once: true });   // browsers need one tap before sound
+document.addEventListener("visibilitychange", () => { if (!actx) return; document.hidden ? actx.suspend() : soundOn && actx.resume(); });
+$("sceneBtn").onclick = () => { sceneIx = (sceneIx + 1) % SCENES.length; showScene(); if (soundOn && actx) { syncSound(); toast(`♪ ${SOUND_NAME[SOUND_OF[SCENES[sceneIx]]]}`); } };
 showScene();
 
 /* =========================================================
